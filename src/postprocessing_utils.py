@@ -1,15 +1,10 @@
-# dependencies
-import os
 import numpy as np
-import pickle
 import geopandas as gpd
 from shapely.geometry import Point, Polygon
 from shapely.ops import unary_union
 import pandas as pd
-from omegaconf import OmegaConf
 from src.quadnode import QuadNode
-from src.coherence import compute_spatial_coherence, compute_magnitude_zscore, compute_rotation_angles, compute_confidence
-from math import atan2, asin, acos, degrees, sqrt
+from math import atan2, asin, acos, degrees
 
 
 def remove_A0(node, A0_inv):
@@ -401,90 +396,3 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
                 offset=offset,
                 layer_name=f"Level {lvl}"
             )
-
-
-if __name__ == "__main__":
-    conf = OmegaConf.load('./config.yaml')
-    if conf.postprocessing.src_transforms == 'default':
-        if conf.data.src_res == 'default':
-            conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
-        src_transforms = os.path.join(conf.data.src_res, f'pyramid_transforms_{conf.data.res_suffixe}.pickle')
-    else:
-        src_transforms = conf.postprocessing.src_transforms
-
-    # prepare paths
-    src_out_gpkg = os.path.join(os.path.dirname(src_transforms), 'points_translate.gpkg')
-    src_offset = os.path.join(os.path.dirname(src_transforms), 'offset.txt')
-
-    with open(src_transforms, 'rb') as f:
-        root = pickle.load(f)
-    offset = np.loadtxt(src_offset, delimiter=',')
-
-    # Postprocess with A0
-    if conf.to_keep.initial_alignment in ['with', 'both']:
-        print("Postprocessing with initial alignment (w_A0)")
-        postprocessing(
-            root=root, 
-            src_out_gpkg=src_out_gpkg, 
-            offset=offset, 
-            to_keep=conf.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
-            suffixe='w_A0', 
-            verbose=conf.postprocessing.verbose,
-            )
-
-    # Postprocess without A0:
-    if conf.to_keep.initial_alignment in ['without', 'both']:
-        print("\nPostprocessing without initial alignment (wo_A0)")
-        A0_inv = np.linalg.inv(root.global_transform)
-        remove_A0(root, A0_inv)
-        postprocessing(
-            root=root, 
-            src_out_gpkg=src_out_gpkg, 
-            offset=offset, 
-            to_keep=conf.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
-            suffixe='wo_A0', 
-            verbose=conf.postprocessing.verbose,
-            )
-
-    print()
-
-
-
-
-
-
-
-
-
-
-# === OLD CODE ===
-
-    # # Compute coherence indexes
-    # translation_x = [node.metrics['translation_x'] for node in list_nodes]
-    # translation_y = [node.metrics['translation_y'] for node in list_nodes]
-    # displacement = [node.metrics['Disp3D'] for node in list_nodes]
-    # planarity = [float(node.planarity) for node in list_nodes]
-    # rotation_angles = [node.metrics['rotation_angle'] for node in list_nodes]
-
-    # spatial_coherences = compute_spatial_coherence(list_nodes, translation_x, translation_y, 40)
-    # magnitude_zscores = compute_magnitude_zscore(list_nodes, displacement, 40)
-
-    # mask_artifact = (
-    #     (np.array(spatial_coherences) < 0.707) |       # direction disagrees with neighbors (> 45°)
-    #     (np.array(magnitude_zscores) > 2.5) |           # magnitude is outlier among neighbors
-    #     (np.array(rotation_angles) > 5) |              # large rotation
-    #     (np.array(planarity) > 0.999)           # flat surface → degenerate ICP
-    # )
-    # print(f"Number of masked samples: {np.sum(mask_artifact)} ({np.round(np.sum(mask_artifact)/mask_artifact.shape[0]*100, 2)}%)")
-
-    # for node, coherence, magnitude, rotation, artifact in zip(list_nodes, spatial_coherences, magnitude_zscores, rotation_angles, mask_artifact):
-    #     node.metrics['spatial_coherence'] = coherence
-    #     node.metrics['magnitude_zscore'] = magnitude
-    #     node.metrics['rotation_angle'] = rotation
-    #     node.metrics['confidence'] = compute_confidence(coherence, magnitude, rotation, node.planarity, node.fitness, node.inlier_rmse, 
-    #                                                     w_fitness=0, w_rmse=0)
-    #     node.metrics['is_artifact'] = bool(artifact)
-
-# ================

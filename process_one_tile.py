@@ -5,6 +5,7 @@ import open3d as o3d
 from time import time
 import pickle
 from omegaconf import OmegaConf
+from postprocessing import postprocessing, remove_A0
 from src.icp_utils import \
     read_pc_with_cat_timming, \
     filter_las_by_classification, \
@@ -12,10 +13,10 @@ from src.icp_utils import \
     node_to_list, \
     find_node, \
     trim_branch
-from src.postprocessing import postprocessing, remove_A0
 
 
 def ICP_process(conf, verbose=True):
+    time_tot = time()
     # test if files exist
     for id_pc, pc in enumerate([conf.data.src_pc1, conf.data.src_pc2]):
         try:
@@ -54,6 +55,12 @@ def ICP_process(conf, verbose=True):
         'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'keep'),
     }
 
+    # Process anthropic
+    tiles_anthropic = {
+        'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'remove'),
+        'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'remove'),
+    }
+
     roots = {
         'ground': None,
         'anthropic': None,
@@ -62,33 +69,22 @@ def ICP_process(conf, verbose=True):
     confs = {
         'ground': {
             'min_points': conf.args.min_points_ground,
+            'min_tile_size': conf.args.min_tile_size_ground,
             'is_anthropic': False,
         },
         'anthropic': {
             'min_points': conf.args.min_points_anthropic,
+            'min_tile_size': conf.args.min_tile_size_anthropic,
             'is_anthropic': True,
         },
     }
-
-    # # --- TEMP ---
-    # src_ground = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\results_ground\TEMP_GROUND.pickle"
-    # src_anthropic = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\results_anthropic\TEMP_ANTHROPIC.pickle"
-    # with open(src_ground, 'rb') as f:
-    #     roots['ground'] = pickle.load(f)
-    # with open(src_anthropic, 'rb') as f:
-    #     roots['anthropic'] = pickle.load(f)
-    # # ---
-
+    
+    time_initializaion = time() - time_tot
     time_quadtree_creation = 0
     time_subclouds_creation = []
     time_icp = []
-    time_transform = []
+    time_subclouds_saving = []
 
-    # Process anthropic
-    tiles_anthropic = {
-        'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'remove'),
-        'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'remove'),
-    }
     for tiles, mode in zip([tiles_ground, tiles_anthropic], roots.keys()):
         for tile in tiles.values():
             tile.translate(np.array([-x for x in offset]))
@@ -117,7 +113,7 @@ def ICP_process(conf, verbose=True):
             indices_tgt=np.arange(len(xyz_tgt)),
             indices_tgt_neigh=np.arange(len(xyz_tgt)),
             level=0,
-            min_tile_size=conf.args.min_tile_size,
+            min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
             is_anthropic=confs[mode]['is_anthropic'],
         )
@@ -132,7 +128,7 @@ def ICP_process(conf, verbose=True):
             args=conf.args, 
             time_subclouds_creation=time_subclouds_creation, 
             time_icp=time_icp, 
-            time_transform=time_transform,
+            time_subclouds_saving=time_subclouds_saving,
             )
 
     # # --- TEMP ---
@@ -174,13 +170,19 @@ def ICP_process(conf, verbose=True):
 
     if verbose:
         print("Executed in ", round(time() - start, 2), " seconds")
-        print("\n\t time_quadtree_creation:", time_quadtree_creation)
-        print("\t time_subclouds_creation:", np.sum(time_subclouds_creation))
-        print("\t time_icp:", np.sum(time_icp))
-        print("\t time_transform:", np.sum(time_transform))
+        print("\n\t Time initialization:", time_initializaion)
+        print("\t Time to create quadtrees:", time_quadtree_creation)
+        print("\t Time to create subclouds:", np.sum(time_subclouds_creation))
+        if conf.args.do_output_transformed:
+            print("\t Time to save subclouds:", np.sum(time_subclouds_saving))
+        print("\t Time to ICP:", np.sum(time_icp))
+
 
     # === POSTPROCESSING ===
     if conf.args.do_postprocessing:
+        if verbose:
+            print("Starting postprocessing...")
+
         src_out_gpkg = os.path.join(os.path.dirname(src_result_transforms), 'points_translate.gpkg')
 
         # Postprocess with A0
@@ -218,14 +220,20 @@ def ICP_process(conf, verbose=True):
         os.path.join(conf.data.src_res, 'config.yaml')
     )
 
+    if verbose:
+        # Show duration of process
+        delta_time_loop = time() - time_tot
+        hours = int(delta_time_loop // 3600)
+        min = int((delta_time_loop - 3600 * hours) // 60)
+        sec = int(delta_time_loop - 3600 * hours - 60 * min)
+        print(f"\n==== COMPLETE PROCESS DONE IN {hours}:{min}:{sec} ====\n")
+
 
 if __name__ == "__main__":
-    time_tot = time()
-    verbose = True
     conf = OmegaConf.load("./config/one_tile.yaml")
     if conf.data.src_res == "default":
         conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
     o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
     ICP_process(conf, conf.args.verbose)
-    print('Time tot: ', time() - time_tot)
+    
     

@@ -1,3 +1,8 @@
 production:
-  src_folder: data/test_production
-  src_csv: data/test_production/list_tiles.csv
+  src_folder_old: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\old
+  src_folder_new: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\new
+  src_csv: default
+preprocessing:
+  do_preprocessing: True
+  pattern: "*_*_(dddd_dddd/dddd-dddd)_*"    # place here a regular expression (regex) that identify the common part of each pair
+  verbose: True

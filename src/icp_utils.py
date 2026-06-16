@@ -8,20 +8,6 @@ from src.quadnode import QuadNode
 import warnings
 
 
-# def read_pc(src_pc):
-#     ext = os.path.splitext(src_pc)[1].lower()
-
-#     if ext in ['.ply', '.pcd', '.xyz', '.xyzrgb', '.xyzn', '.pts']:
-#         return o3d.io.read_point_cloud(src_pc)
-#     elif ext in ['.las', '.laz']:
-#         xyz = laspy.read(src_pc)
-#         pc = o3d.geometry.PointCloud()
-#         pc.points = o3d.utility.Vector3dVector(xyz.xyz)
-#         return pc
-#     else:
-#         raise AttributeError(f"Wrong extension '{ext}'. Should be in '.ply', '.pcd', '.xyz', '.xyzrgb', '.xyzn', '.pts', '.las' and '.laz")
-
-
 def read_pc_with_cat_timming(src_pc, list_cat_to_remove):
     ext = os.path.splitext(src_pc)[1].lower()
     if ext in ['.las', '.laz']:
@@ -208,7 +194,7 @@ def extract_subcloud(pc, indices):
     return sub_pc
 
 
-def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_transform):
+def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving):
     """Traverse tree and run ICP on each node."""
     if node == None:
         return
@@ -223,10 +209,12 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     # save source and target tile if wanted:
     if args.do_output_transformed and args.output_level in [-1, node.level]:
+        time_sub_0 = time()
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_x={x}_y={y}_target.ply')
         o3d.io.write_point_cloud(src_file, pc_tgt)
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_x={x}_y={y}_source.ply')
         o3d.io.write_point_cloud(src_file, pc_src)
+        time_subclouds_saving.append(time() - time_sub_0)
 
     # choose method
     method = None
@@ -239,7 +227,6 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     pretransform = node.parent.global_transform if node.parent != None else np.eye(4)
     pc_src.transform(pretransform)
-
 
     # max_correspondence = [0.5, 5, 4, 3, 1.5, 0.4, 0.3, 0.27, 0.25, 0.22, 0.2]
     # max_correspondence = [0.5, 5, 4, 3, 1.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
@@ -272,11 +259,13 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     # save transformed tile if wanted:
     if args.do_output_transformed and args.output_level in [-1, node.level]:
+        time_sub_0 = time()
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_x={x}_y={y}_pretransformed.ply')
         o3d.io.write_point_cloud(src_file, pc_src)
         pc_src.transform(reg.transformation)
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_x={x}_y={y}_transformed.ply')
         o3d.io.write_point_cloud(src_file, pc_src)
+        time_subclouds_saving.append(time() - time_sub_0)
 
     # erase indices for storage
     node.indices_src = None
@@ -284,15 +273,23 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     node.indices_tgt_neigh = None
 
     for child in node.children:
-        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_transform)
+        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp)
 
 
 def filter_las_by_classification(las, classification_value, mode):
     """Filter laspy object by classification and return an Open3D point cloud."""
     if mode == 'keep':
-        mask = las.classification == classification_value
+        if isinstance(classification_value, list):
+            # add all elements of list
+            pass
+        else:
+            mask = las.classification == classification_value
     elif mode == 'remove':
-        mask = las.classification != classification_value
+        if isinstance(classification_value, list):
+            # remove all elements of list
+            pass
+        else:
+            mask = las.classification != classification_value
     else:
         mask = np.ones(len(las), dtype=np.bool)
 
@@ -351,35 +348,3 @@ def trim_branch(node):
     # Break all references so pickle can't follow them
     node.parent = None
     node.children = []
-
-
-# def find_orphan(node):
-#     if node == None:
-#         return 0
-#     # print("num children: ", len(node.children))
-#     count = 0
-#     if node.parent == None and node.level > 0:
-#         count += 1
-#     for child in node.children:
-#         if child != None:
-#             count += find_orphan(child)
-#     return count
-
-
-# def complete_children(node):
-#     bboxes = compute_bbox(node.bbox)
-#     for subbbox in bboxes:
-#         # sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
-#         # center = np.array([subbbox['max_bound'][0] - subbbox['min_bound'][0], subbbox['max_bound'][1] - subbbox['min_bound'][1], node.center[2]])
-#         new_node = QuadNode(subbbox, [], [], [], None, node.level + 1, node)
-#         for name, val in vars(node).items():
-#             if name in ['bbox', 'id', 'indices_src', 'indices_tgt', 'indices_tgt_neigh', 'level', 'children', 'parent', 'size']:
-#                 continue
-#             # new_node[name] = val
-#             setattr(new_node, name, val)
-
-#         # new_node.global_transform = node.global_transform
-
-#         if find_node(node, new_node.id) == None:
-#             node.children.append(new_node)
-
