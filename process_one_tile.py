@@ -16,6 +16,8 @@ from src.icp_utils import \
 
 
 def ICP_process(conf, verbose=True):
+    if verbose:
+        print("Starting process (might take several minutes)...")
     time_tot = time()
     # test if files exist
     for id_pc, pc in enumerate([conf.data.src_pc1, conf.data.src_pc2]):
@@ -86,10 +88,17 @@ def ICP_process(conf, verbose=True):
     time_subclouds_saving = []
 
     for tiles, mode in zip([tiles_ground, tiles_anthropic], roots.keys()):
+        # test if pointcloud empty
+        if len(tiles['source'].points) == 0 and len(tiles['target'].points) == 0:
+            if verbose:
+                print("No points detected for ", mode)
+            continue
+        
+        # apply offset
         for tile in tiles.values():
             tile.translate(np.array([-x for x in offset]))
 
-        # Compute normals
+        # compute normals
         if conf.args.method == 'pointtoplane':
             tiles['target'].estimate_normals(
                 o3d.geometry.KDTreeSearchParamHybrid(
@@ -103,7 +112,6 @@ def ICP_process(conf, verbose=True):
 
         # build tree
         time0 = time()
-
         roots[mode] = build_quadtree(
             xyz_src=xyz_src,
             xyz_tgt=xyz_tgt,
@@ -120,6 +128,7 @@ def ICP_process(conf, verbose=True):
 
         time_quadtree_creation += time() - time0
 
+        # run the ICP algorithm on every node of the tree
         run_icp_on_tree(
             node=roots[mode], 
             pc_source=tiles['source'], 
@@ -131,14 +140,14 @@ def ICP_process(conf, verbose=True):
             time_subclouds_saving=time_subclouds_saving,
             )
 
-    # # --- TEMP ---
-    # src_ground = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\results_ground\TEMP_GROUND.pickle"
-    # src_anthropic = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\results_anthropic\TEMP_ANTHROPIC.pickle"
-    # with open(src_ground, 'wb') as f:
-    #     pickle.dump(roots['ground'], f)
-    # with open(src_anthropic, 'wb') as f:
-    #     pickle.dump(roots['anthropic'], f)
-    # # ---
+    # --- TEMP ---
+    src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
+    src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
+    with open(src_ground, 'wb') as f:
+        pickle.dump(roots['ground'], f)
+    with open(src_anthropic, 'wb') as f:
+        pickle.dump(roots['anthropic'], f)
+    # ---
 
     # replace nodes in ground by leaves in buildings
     anthropic_nodes = node_to_list(roots['anthropic'])
@@ -169,17 +178,18 @@ def ICP_process(conf, verbose=True):
             f.write(f"{offset[0]},{offset[1]},{offset[2]}")
 
     if verbose:
-        print("Executed in ", round(time() - start, 2), " seconds")
-        print("\n\t Time initialization:", time_initializaion)
-        print("\t Time to create quadtrees:", time_quadtree_creation)
-        print("\t Time to create subclouds:", np.sum(time_subclouds_creation))
+        print(f"Algorithm executed in {int(time() - start)}s")
+        print(f"\n\t Time initialization: {int(time_initializaion)}s")
+        print(f"\t Time to create quadtrees: {int(time_quadtree_creation)}s")
+        print(f"\t Time to create subclouds: {int(np.sum(time_subclouds_creation))}s")
         if conf.args.do_output_transformed:
-            print("\t Time to save subclouds:", np.sum(time_subclouds_saving))
-        print("\t Time to ICP:", np.sum(time_icp))
+            print(f"\t Time to save subclouds: {int(np.sum(time_subclouds_saving))}s")
+        print(f"\t Time to ICP: {int(np.sum(time_icp))}s")
 
 
     # === POSTPROCESSING ===
     if conf.args.do_postprocessing:
+        time_postprocess = time()
         if verbose:
             print("Starting postprocessing...")
 
@@ -192,7 +202,7 @@ def ICP_process(conf, verbose=True):
             root=roots['ground'], 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.to_keep,
+            to_keep=conf.postprocessing.to_keep,
             absurd_dist=conf.postprocessing.absurd_dist, 
             suffixe='w_A0', 
             verbose=conf.postprocessing.verbose,
@@ -207,11 +217,13 @@ def ICP_process(conf, verbose=True):
             root=roots['ground'], 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.to_keep,
+            to_keep=conf.postprocessing.to_keep,
             absurd_dist=conf.postprocessing.absurd_dist, 
             suffixe='wo_A0', 
             verbose=conf.postprocessing.verbose,
             )
+        if conf.args.verbose:
+            print(f"Postprocessing executed in {int(time() - time_postprocess)}s")
         print()
 
     # save config
@@ -235,5 +247,4 @@ if __name__ == "__main__":
         conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
     o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
     ICP_process(conf, conf.args.verbose)
-    
     

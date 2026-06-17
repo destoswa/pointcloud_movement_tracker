@@ -142,7 +142,7 @@ def detect_absurds(node, absurd_th):
     center = np.linalg.inv(node.local_transform) @ node.global_transform @ center
     translated = node.local_transform @ center
     diff = translated - center
-    norm_local = float(np.linalg.norm(diff[:2, 0],0))   # norm 2D along 0xy
+    norm_local = float(np.linalg.norm(diff[:2, 0]))   # norm 2D along 0xy
 
     # Apply changes if value absurd
     if norm_local > absurd_th and node.anthropic_state <= 0:# and node.is_leaf:
@@ -155,9 +155,9 @@ def detect_absurds(node, absurd_th):
         node.is_absurd = True
         node.is_leaf = True
         node.children = []
-
-    for child in node.children:
-        counter += detect_absurds(child, absurd_th)
+    else:
+        for child in node.children:
+            counter += detect_absurds(child, absurd_th)
     return counter
 
 

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pickle
 from omegaconf import OmegaConf
+from time import time
 from src.postprocessing_utils import \
     tree_to_list, \
     compute_translation,\
@@ -10,7 +11,7 @@ from src.postprocessing_utils import \
     compute_data_for_gpkg, \
     node_to_list, \
     export_points_and_bboxes, \
-    remove_A0
+    remove_A0, find_node
 
 
 def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='', verbose=False):
@@ -25,22 +26,34 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
     tree_to_list(root, list_nodes, list_nodes_per_level)
 
     # Compute metrics:
+    time0 = time()
     compute_translation(root)
     compute_rotation(root)
+    
+    if verbose:
+        print("Time to compute translation and rotation: ", time() - time0)
 
     # Detect absurd values
     original_len = len(root)
+    time0 = time()
     counter = detect_absurds(root, absurd_dist)
+    
+    if verbose:
+        print("Time to detect absurds: ", time() - time0)
 
     if verbose:
         print(f"Number of absurd values: {counter} ({np.round(counter/original_len*100, 2)}%)")
 
     # Gather data for GPKG
+    time0 = time()
     data, bbox_data = compute_data_for_gpkg(root, offset)
+    if verbose:
+        print("Time to compute data for gpkg: ", time() - time0)
 
     columns = node_to_list(root)[0]
 
     # Export all tiles
+    time0 = time()
     if to_keep.full_tree:
         export_points_and_bboxes(
             data=data,
@@ -94,10 +107,12 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
                 offset=offset,
                 layer_name=f"Level {lvl}"
             )
-
+    
+    if verbose:
+        print("Time to export different version: ", time() - time0)
 
 if __name__ == "__main__":
-    conf = OmegaConf.load('./config.yaml')
+    conf = OmegaConf.load('./config/one_tile.yaml')
     if conf.postprocessing.src_transforms == 'default':
         if conf.data.src_res == 'default':
             conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
@@ -114,20 +129,20 @@ if __name__ == "__main__":
     offset = np.loadtxt(src_offset, delimiter=',')
 
     # Postprocess with A0
-    if conf.to_keep.initial_alignment in ['with', 'both']:
+    if conf.postprocessing.to_keep.initial_alignment in ['with', 'both']:
         print("Postprocessing with initial alignment (w_A0)")
         postprocessing(
             root=root, 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.to_keep,
+            to_keep=conf.postprocessing.to_keep,
             absurd_dist=conf.postprocessing.absurd_dist, 
             suffixe='w_A0', 
             verbose=conf.postprocessing.verbose,
             )
 
     # Postprocess without A0:
-    if conf.to_keep.initial_alignment in ['without', 'both']:
+    if conf.postprocessing.to_keep.initial_alignment in ['without', 'both']:
         print("\nPostprocessing without initial alignment (wo_A0)")
         A0_inv = np.linalg.inv(root.global_transform)
         remove_A0(root, A0_inv)
@@ -135,7 +150,7 @@ if __name__ == "__main__":
             root=root, 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.to_keep,
+            to_keep=conf.postprocessing.to_keep,
             absurd_dist=conf.postprocessing.absurd_dist, 
             suffixe='wo_A0', 
             verbose=conf.postprocessing.verbose,

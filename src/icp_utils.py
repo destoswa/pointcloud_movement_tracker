@@ -4,7 +4,8 @@ import open3d as o3d
 import laspy
 from time import time
 from plyfile import PlyData
-from src.quadnode import QuadNode
+if __name__ != "__main__":
+    from src.quadnode import QuadNode
 import warnings
 
 
@@ -17,6 +18,8 @@ def read_pc_with_cat_timming(src_pc, list_cat_to_remove):
         for val in list_cat_to_remove:
             mask[Classification == val] = False
         pc.points = pc.points[mask]
+    else:
+        raise ValueError(f"The pointcloud is not of type LAS or LAZ: {src_pc}")
 
     return pc
 
@@ -222,34 +225,50 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
         method = o3d.pipelines.registration.TransformationEstimationPointToPoint()
     elif args.method == 'pointtoplane':
         method = o3d.pipelines.registration.TransformationEstimationPointToPlane()
+    elif args.method == 'gicp':
+        method = o3d.pipelines.registration.TransformationEstimationForGeneralizedICP()
     else:
         raise ValueError(f"The given method is wrong!\n\tGiven: {args.method}\n\tAccepted: [pointtopoint, pointtoplane]")
 
     pretransform = node.parent.global_transform if node.parent != None else np.eye(4)
     pc_src.transform(pretransform)
 
-    # max_correspondence = [0.5, 5, 4, 3, 1.5, 0.4, 0.3, 0.27, 0.25, 0.22, 0.2]
-    # max_correspondence = [0.5, 5, 4, 3, 1.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-    # max_correspondence = [0.5, 5, 4, 3, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5]
-    # max_correspondence = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-    # max_correspondence = [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    # max_correspondence = [0.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5]
-    # max_correspondence = [0.5, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]
-    # max_correspondence = [0.5, 5, 5,5,5,5,5,5,5,5,5,5,5,5,5]
+    # find corresponding max_correspondence
+    max_correspondence = args.max_correspondence
+    if isinstance(max_correspondence, list):
+        if node.level >= len(max_correspondence):
+            raise AttributeError(f"The list of values for max_correspondence is too short to match the level {node.level} of the tree!")
+        max_correspondence = max_correspondence[node.level]
 
     time_icp0 = time()
-    reg = o3d.pipelines.registration.registration_icp(
-        pc_src,
-        pc_tgt_neigh,
-        max_correspondence_distance=0.5,
-        init=np.eye(4),
-        estimation_method=method,
-        criteria=o3d.pipelines.registration.ICPConvergenceCriteria(
-            max_iteration=args.max_iteration,           # default: 30
-            relative_fitness=args.threshold,      # default: 1e-6
-            relative_rmse=args.threshold          # default: 1e-6
+
+    if args.method in ['pointtopoint', 'pointtoplane']:
+        reg = o3d.pipelines.registration.registration_icp(
+            pc_src,
+            pc_tgt_neigh,
+            max_correspondence_distance=max_correspondence,
+            init=np.eye(4),
+            estimation_method=method,
+            criteria=o3d.pipelines.registration.ICPConvergenceCriteria(
+                max_iteration=args.max_iteration,           # default: 30
+                relative_fitness=args.threshold,            # default: 1e-6
+                relative_rmse=args.threshold                # default: 1e-6
+            )
         )
-    )
+    else:   # gicp
+        reg = o3d.pipelines.registration.registration_generalized_icp(
+            pc_src,
+            pc_tgt_neigh,
+            max_correspondence_distance=max_correspondence,
+            init=np.eye(4),
+            estimation_method=method,
+            criteria=o3d.pipelines.registration.ICPConvergenceCriteria(
+                max_iteration=args.max_iteration,           # default: 30
+                relative_fitness=args.threshold,            # default: 1e-6
+                relative_rmse=args.threshold                # default: 1e-6
+            )
+        )
+
     time_icp.append(time() - time_icp0)
 
     node.fitness = reg.fitness
@@ -273,21 +292,25 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     node.indices_tgt_neigh = None
 
     for child in node.children:
-        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp)
+        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving)
 
 
 def filter_las_by_classification(las, classification_value, mode):
     """Filter laspy object by classification and return an Open3D point cloud."""
-    if mode == 'keep':
+    assert mode in ['keep', 'remove']
+
+    if "classification" not in vars(las):
+        mask = np.ones(len(las), dtype=np.bool)
+    elif mode == 'keep':
+        # add all elements of list
         if isinstance(classification_value, list):
-            # add all elements of list
-            pass
+            mask = np.array([x in [classification_value] for x in las.classification])
         else:
             mask = las.classification == classification_value
     elif mode == 'remove':
+        # remove all elements of list
         if isinstance(classification_value, list):
-            # remove all elements of list
-            pass
+            mask = np.array([x not in [classification_value] for x in las.classification])
         else:
             mask = las.classification != classification_value
     else:
@@ -348,3 +371,9 @@ def trim_branch(node):
     # Break all references so pickle can't follow them
     node.parent = None
     node.children = []
+
+
+if __name__ == "__main__":
+    a = np.array([0, 1, 2, 1, 0])
+    mask = [x not in [0, 1] for x in a]
+    print(mask)

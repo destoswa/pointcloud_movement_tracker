@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 class QuadNode:
     """Quadtree node storing spatial bbox, point indices, level, and children."""
@@ -23,6 +23,7 @@ class QuadNode:
         self.anthropic_state = 0 if is_anthropic else -1   # 0 = normal, 1 = new building, 2 = destruction
         self.is_leaf = True
         self.is_absurd = False
+        # self.test = random.random()
 
     def __len__(self):
         counter = len(self.children)
@@ -38,3 +39,7 @@ class QuadNode:
         while parent.parent != None:
             parent = parent.parent
         return parent
+
+
+if __name__ == "__main__":
+    print(random.random())

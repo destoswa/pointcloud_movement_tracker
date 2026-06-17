@@ -32,8 +32,7 @@ This pipeline was developped using python 3.9 and was tested successfully on pyt
     ```
 
 ## Introduction
-...
-
+The aim of this tool is to compare two pointclouds of different dates and highlight, with an arbitrary precision, the regions of movement.
 
 ## Algorithm + architecture
 ...

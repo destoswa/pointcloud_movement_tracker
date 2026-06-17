@@ -1,43 +1,36 @@
 data:
-  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_20_nb_iterations\swisssurface3d_2018_2589-1169_2056_5728.ply
-  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_20_nb_iterations\swisssurface3d_2024_2589-1169_2056_5728.ply
-  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_24_point_to_plane\test
-  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\swisssurface3d_2018_2588-1169_2056_5728.las
-  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\swisssurface3d_2024_2588-1169_2056_5728.copc.laz
-  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking\data\test_21_directly_from_las\results_clipping_centering
-  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_26_rotations\real_sample\swisssurface3d_2018_2589-1169_2056_5728.las
-  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_26_rotations\real_sample\swisssurface3d_2024_2589-1169_2056_5728.copc.laz
-  src_res: default
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2589_1169\laz\PC2015_2589_1169.laz
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2589_1169\laz\PC2019_2589_1169.laz
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\artificial_samples_for_mix\PC2015_2589_1169.laz
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2589-1169_2056_5728.las
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2024_2589-1169_2056_5728.las
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\pointtoplane
   res_suffixe: test
 args:
-  method: pointtopoint  # choose between pointtopoint and pointtoplane
+  method: pointtoplane  # choose between pointtopoint, pointtoplane and gicp
   pointtoplane_radius: 2.0
   pointtoplane_max_nn: 50
-  pointtoplane_min_nn: 10
-  max_iteration: 100
+  max_iteration: 30
   threshold: 1e-4
-  # min_tile_size: 7
-  # min_points: 2000
+  max_correspondence: 1.0 # can be a single value or a list of values
   min_tile_size_ground: 7
   min_tile_size_anthropic: 7
   min_points_ground: 2000
   min_points_anthropic: 50
   huge_translation: [2589500, 1169500, 0]
   category: all
-  do_output_transformed: True
+  do_output_transformed: False
   output_level: -1 # -1 to output at each level
-  do_preprocessing: False
   do_postprocessing: True
   verbose: True
-to_keep:
-  full_tree: True
-  layers: True
-  initial_alignment: both # choose between {'with', 'without', 'both'}
 preprocessing:
-  list_cat_to_remove: [1, 3, 9, 14, 15]
-  cat_ground: 2
-  # do_keep_sf: False
+  list_cat_to_remove: [1, 3, 9, 14, 15, 42]
+  cat_ground: 2 # can be a single value or a list of values
 postprocessing:
   src_transforms: default
   absurd_dist: 5
+  to_keep:
+    full_tree: True
+    layers: True
+    initial_alignment: both # choose between {'with', 'without', 'both'}
   verbose: False
