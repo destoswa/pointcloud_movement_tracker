@@ -87,7 +87,18 @@ def ICP_process(conf, verbose=True):
     time_icp = []
     time_subclouds_saving = []
 
+    # # --- TEMP ---
+    # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
+    # src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
+    # with open(src_ground, 'rb') as f:
+    #     roots['ground'] = pickle.load(f)
+    # with open(src_anthropic, 'rb') as f:
+    #     roots['anthropic'] = pickle.load(f)
+    # # ---
+
     for tiles, mode in zip([tiles_ground, tiles_anthropic], roots.keys()):
+        # if mode == 'ground':
+        #     continue
         # test if pointcloud empty
         if len(tiles['source'].points) == 0 and len(tiles['target'].points) == 0:
             if verbose:
@@ -140,20 +151,22 @@ def ICP_process(conf, verbose=True):
             time_subclouds_saving=time_subclouds_saving,
             )
 
-    # --- TEMP ---
-    src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
-    src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
-    with open(src_ground, 'wb') as f:
-        pickle.dump(roots['ground'], f)
-    with open(src_anthropic, 'wb') as f:
-        pickle.dump(roots['anthropic'], f)
-    # ---
+    # # --- TEMP ---
+    # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
+    # src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
+    # with open(src_ground, 'wb')   as f:
+    #     pickle.dump(roots['ground'], f)
+    # with open(src_anthropic, 'wb') as f:
+    #     pickle.dump(roots['anthropic'], f)
+    # # ---
 
     # replace nodes in ground by leaves in buildings
     anthropic_nodes = node_to_list(roots['anthropic'])
     anthropic_leaves = [x for x in anthropic_nodes if x.is_leaf == True]
     
     for node in anthropic_leaves:
+        # if node.id == -146799575948:
+        #     print('derp')
         if node.level == 0:
             break
         ground_node = find_node(roots['ground'], node.id)
@@ -168,6 +181,7 @@ def ICP_process(conf, verbose=True):
                 node = node.parent
                 ground_node = find_node(roots['ground'], node.id)
             ground_node.children.append(child)
+            child.parent = ground_node
             ground_node.is_leaf = True
 
     # save final root

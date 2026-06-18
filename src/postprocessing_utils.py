@@ -225,34 +225,39 @@ def compute_data_for_gpkg(node, offset):
 
 
 def clip_overlaps(gdf):
-    """
-    For each polygon, subtract all smaller polygons that overlap it.
-    Smaller = smaller area.
-    Returns a new GeoDataFrame with non-overlapping geometries.
-    """
     gdf = gdf.copy()
-
-    # compute area and sort such that smaller tiles appear on top of bigger ones
     gdf["area"] = gdf.geometry.area
-    gdf = gdf.sort_values("area", ascending=False)
+    gdf["original_order"] = np.arange(len(gdf))
+    gdf = gdf.sort_values("area", ascending=False).reset_index(drop=True)
 
-    new_geometries = []
-    for i, row in gdf.iterrows():
-        geom = row.geometry
-        # Get all smaller polygons that overlap this one
-        smaller = gdf[gdf.index > i]  # already sorted by area descending
+    max_level = gdf["level"].max()
+    # only clip non-max-level tiles, but use ALL tiles (including max level) as cutters
+    tiles_to_clip = gdf[gdf["level"] != max_level].index
+    all_smaller = gdf  # max level tiles can act as cutters
+
+    new_geometries = gdf.geometry.copy()  # start with original geometries
+    counter = 0
+
+    for i in tiles_to_clip:
+        geom = gdf.loc[i, "geometry"]
+        # smaller = tiles that come after in area-sorted order (i.e. smaller area)
+        smaller = all_smaller[all_smaller.index > i]
         overlapping = smaller[smaller.geometry.intersects(geom)]
-        
+
         if len(overlapping) > 0:
-            # Subtract all smaller overlapping polygons
+            counter += 1
             union_smaller = unary_union(overlapping.geometry)
             geom = geom.difference(union_smaller)
-        
-        new_geometries.append(geom)
+
+        new_geometries.iloc[i] = geom
 
     gdf.geometry = new_geometries
-    return gdf
+    print("num overlapped: ", counter)
 
+    # Restore original order
+    gdf = gdf.sort_values("original_order").reset_index(drop=True)
+    gdf = gdf.drop(columns=["area", "original_order"])
+    return gdf
 
 def export_points_and_bboxes(data, columns, bbox_data, output_path, offset, do_clip_overlaps=False, to_export='both', layer_name='', crs="EPSG:2056"):
 

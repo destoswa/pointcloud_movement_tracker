@@ -144,6 +144,8 @@ def build_quadtree(
     # stopping conditions
     tile_size = np.min((np.array(bbox['max_bound']) - np.array(bbox['min_bound']))[0:2])
     if is_anthropic:
+        if node.id == -145963248373:
+            print('derp')
         tile_len = np.max([len(indices_src), len(indices_tgt)])
         if tile_len < min_points:
             return None
@@ -299,7 +301,8 @@ def filter_las_by_classification(las, classification_value, mode):
     """Filter laspy object by classification and return an Open3D point cloud."""
     assert mode in ['keep', 'remove']
 
-    if "classification" not in vars(las):
+    # if "classification" not in vars(las):
+    if "classification" not in las.point_format.dimension_names:
         mask = np.ones(len(las), dtype=np.bool)
     elif mode == 'keep':
         # add all elements of list

@@ -4,10 +4,13 @@ data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\artificial_samples_for_mix\PC2015_2589_1169.laz
   src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2589-1169_2056_5728.las
   src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2024_2589-1169_2056_5728.las
-  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\pointtoplane
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\pointtopoint
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_MNT25_reprojLV95_25m.laz
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
+  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\gicp
   res_suffixe: test
 args:
-  method: pointtoplane  # choose between pointtopoint, pointtoplane and gicp
+  method: pointtopoint  # choose between pointtopoint, pointtoplane and gicp
   pointtoplane_radius: 2.0
   pointtoplane_max_nn: 50
   max_iteration: 30
