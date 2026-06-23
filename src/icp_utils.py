@@ -144,8 +144,6 @@ def build_quadtree(
     # stopping conditions
     tile_size = np.min((np.array(bbox['max_bound']) - np.array(bbox['min_bound']))[0:2])
     if is_anthropic:
-        if node.id == -145963248373:
-            print('derp')
         tile_len = np.max([len(indices_src), len(indices_tgt)])
         if tile_len < min_points:
             return None
@@ -199,7 +197,7 @@ def extract_subcloud(pc, indices):
     return sub_pc
 
 
-def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving):
+def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving, mode='ground'):
     """Traverse tree and run ICP on each node."""
     if node == None:
         return
@@ -212,6 +210,8 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     pc_src = extract_subcloud(pc_source, node.indices_src)
     time_subclouds_creation.append(time() - time_sub_0)
 
+    if len(pc_src.points) == 0 or len(pc_tgt.points) == 0:
+        return
     # save source and target tile if wanted:
     if args.do_output_transformed and args.output_level in [-1, node.level]:
         time_sub_0 = time()
@@ -229,6 +229,11 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
         method = o3d.pipelines.registration.TransformationEstimationPointToPlane()
     elif args.method == 'gicp':
         method = o3d.pipelines.registration.TransformationEstimationForGeneralizedICP()
+    elif args.method == 'mix':
+        if mode == 'ground':
+            method = o3d.pipelines.registration.TransformationEstimationPointToPlane()
+        else:
+            method = o3d.pipelines.registration.TransformationEstimationPointToPoint()
     else:
         raise ValueError(f"The given method is wrong!\n\tGiven: {args.method}\n\tAccepted: [pointtopoint, pointtoplane]")
 
@@ -244,7 +249,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     time_icp0 = time()
 
-    if args.method in ['pointtopoint', 'pointtoplane']:
+    if args.method in ['pointtopoint', 'pointtoplane', 'mix']:
         reg = o3d.pipelines.registration.registration_icp(
             pc_src,
             pc_tgt_neigh,
@@ -294,7 +299,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     node.indices_tgt_neigh = None
 
     for child in node.children:
-        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving)
+        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving, mode=mode)
 
 
 def filter_las_by_classification(las, classification_value, mode):
@@ -304,8 +309,9 @@ def filter_las_by_classification(las, classification_value, mode):
     # if "classification" not in vars(las):
     if "classification" not in las.point_format.dimension_names:
         mask = np.ones(len(las), dtype=np.bool)
+    elif len(set(las.classification)) == 1:
+        mask = np.ones(len(las), dtype=np.bool)
     elif mode == 'keep':
-        # add all elements of list
         if isinstance(classification_value, list):
             mask = np.array([x in [classification_value] for x in las.classification])
         else:

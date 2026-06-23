@@ -47,7 +47,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, output_csv, pattern_temp
     # --------------------------------
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
-        writer.writerow(['key', 'src_pc1', 'src_pc2', 'src_res', 'status'])
+        writer.writerow(['key', 'pc1', 'pc2', 'res', 'status'])
         for key, f1, f2 in matched:
             writer.writerow([key, f1, f2, f'{key}_res', 'matched'])
         for key, f1 in unmatched1:

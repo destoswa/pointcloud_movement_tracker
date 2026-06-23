@@ -131,21 +131,23 @@ def trim_branch(node):
     node.children = []
 
 
-def detect_absurds(node, absurd_th):
+def detect_absurds(node, absurd_th_local, absurd_th_global):
     if node == None:
         return 0
 
     counter = 0
 
     # Compute local transform
-    center = np.vstack([node.center.reshape((3,1)), np.array([1])])
-    center = np.linalg.inv(node.local_transform) @ node.global_transform @ center
+    center_original = np.vstack([node.center.reshape((3,1)), np.array([1])])
+    center = np.linalg.inv(node.local_transform) @ node.global_transform @ center_original
     translated = node.local_transform @ center
     diff = translated - center
     norm_local = float(np.linalg.norm(diff[:2, 0]))   # norm 2D along 0xy
+    diff_original = center - center_original
+    norm_global = float(np.linalg.norm(diff_original))
 
     # Apply changes if value absurd
-    if norm_local > absurd_th and node.anthropic_state <= 0:# and node.is_leaf:
+    if (norm_local > absurd_th_local or norm_global > absurd_th_global) and node.anthropic_state <= 0 :# and node.is_leaf:
         counter += 1
         for child in node.children:
             trim_branch(child)
@@ -157,7 +159,7 @@ def detect_absurds(node, absurd_th):
         node.children = []
     else:
         for child in node.children:
-            counter += detect_absurds(child, absurd_th)
+            counter += detect_absurds(child, absurd_th_local, absurd_th_global)
     return counter
 
 
@@ -224,7 +226,7 @@ def compute_data_for_gpkg(node, offset):
     return data, bbox_data
 
 
-def clip_overlaps(gdf):
+def clip_overlaps(gdf, verbose=False):
     gdf = gdf.copy()
     gdf["area"] = gdf.geometry.area
     gdf["original_order"] = np.arange(len(gdf))
@@ -252,14 +254,15 @@ def clip_overlaps(gdf):
         new_geometries.iloc[i] = geom
 
     gdf.geometry = new_geometries
-    print("num overlapped: ", counter)
+    if verbose:
+        print("num tiles to clip: ", counter)
 
     # Restore original order
     gdf = gdf.sort_values("original_order").reset_index(drop=True)
     gdf = gdf.drop(columns=["area", "original_order"])
     return gdf
 
-def export_points_and_bboxes(data, columns, bbox_data, output_path, offset, do_clip_overlaps=False, to_export='both', layer_name='', crs="EPSG:2056"):
+def export_points_and_bboxes(data, columns, bbox_data, output_path, offset, do_clip_overlaps=False, to_export='both', layer_name='', crs="EPSG:2056", verbose=False):
 
     df_points = pd.DataFrame(data, columns=columns)
 
@@ -278,7 +281,7 @@ def export_points_and_bboxes(data, columns, bbox_data, output_path, offset, do_c
         gdf_bboxes = gpd.GeoDataFrame(df_points, geometry=rows, crs=crs)
 
         if do_clip_overlaps:
-            gdf_bboxes = clip_overlaps(gdf_bboxes)  # reorders rows!
+            gdf_bboxes = clip_overlaps(gdf_bboxes, verbose)  # reorders rows!
 
         gdf_bboxes.to_file(output_path, layer=layer_name_sub, driver="GPKG")
 
@@ -318,86 +321,3 @@ def find_node(node, id):
                 if res != None:
                     return res
         return
-
-
-def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='', verbose=False):
-    # prepare paths
-    src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffixe}.gpkg"
-    src_out_gpkg_leaves = src_out_gpkg.split('.gpkg')[0] + f"_leaves.gpkg"
-    src_out_gpkg_layers_tiles = src_out_gpkg.split('.gpkg')[0] + f"_layers_tiles.gpkg"
-    src_out_gpkg_layers_centers = src_out_gpkg.split('.gpkg')[0] + f"_layers_centers.gpkg"
-
-    # store nodes in a list
-    list_nodes, list_nodes_per_level = [], []
-    tree_to_list(root, list_nodes, list_nodes_per_level)
-
-    # Compute metrics:
-    compute_translation(root)
-    compute_rotation(root)
-
-    # Detect absurd values
-    original_len = len(root)
-    counter = detect_absurds(root, absurd_dist)
-
-    if verbose:
-        print(f"Number of absurd values: {counter} ({np.round(counter/original_len*100, 2)}%)")
-
-    # Gather data for GPKG
-    data, bbox_data = compute_data_for_gpkg(root, offset)
-
-    columns = node_to_list(root)[0]
-
-    # Export all tiles
-    if to_keep.full_tree:
-        export_points_and_bboxes(
-            data=data,
-            bbox_data=bbox_data,
-            columns=columns,
-            output_path=src_out_gpkg,
-            offset=offset,
-            do_clip_overlaps=False,
-        )
-
-    # Export only leaves
-    data_leaves = [x for x in data if x[-2] == True]
-    mask_leaves = np.array([x[-2] for x in data], dtype=np.bool)
-    bbox_data_leaves = list(np.array(bbox_data)[mask_leaves])
-
-    export_points_and_bboxes(
-        data=data_leaves,
-        bbox_data=bbox_data_leaves,
-        columns=columns,
-        output_path=src_out_gpkg_leaves,
-        offset=offset,
-        do_clip_overlaps=True,
-    )
-
-    # Layer by layer
-    if to_keep.layers:
-        if verbose:
-            print("Num of tiles per level:")
-        for lvl in range(len(list_nodes_per_level)):
-            if verbose:
-                print("\tlevel: ", lvl, ' - num subtiles: ', len(list_nodes_per_level[lvl]))
-
-            data, bbox_data = compute_data_for_gpkg(list_nodes_per_level[lvl], offset)
-
-            export_points_and_bboxes(
-                data=data,
-                bbox_data=bbox_data,
-                columns=columns,
-                output_path=src_out_gpkg_layers_tiles,
-                to_export='boxes',
-                offset=offset,
-                layer_name=f"Level {lvl}"
-            )
-
-            export_points_and_bboxes(
-                data=data,
-                bbox_data=bbox_data,
-                columns=columns,
-                output_path=src_out_gpkg_layers_centers,
-                to_export='points',
-                offset=offset,
-                layer_name=f"Level {lvl}"
-            )

@@ -2,12 +2,17 @@ data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2589_1169\laz\PC2015_2589_1169.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2589_1169\laz\PC2019_2589_1169.laz
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\artificial_samples_for_mix\PC2015_2589_1169.laz
-  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2589-1169_2056_5728.las
-  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2024_2589-1169_2056_5728.las
-  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\pointtopoint
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2589-1169_2056_5728.las
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2024_2589-1169_2056_5728.las
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2588_1169\laz\PC2015_2588_1169.laz
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2588-1169_2056_5728.las
+  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\mix
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
   # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\gicp
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2001_LV95_1m.laz
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2015_LV95_50cm_resampAvg_1m.laz
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\pointtopoint
   res_suffixe: test
 args:
   method: pointtopoint  # choose between pointtopoint, pointtoplane and gicp
@@ -15,9 +20,9 @@ args:
   pointtoplane_max_nn: 50
   max_iteration: 30
   threshold: 1e-4
-  max_correspondence: 1.0 # can be a single value or a list of values
-  min_tile_size_ground: 7
-  min_tile_size_anthropic: 7
+  max_correspondence: 1.5 # can be a single value or a list of values
+  min_tile_size_ground: 512
+  min_tile_size_anthropic: 512
   min_points_ground: 2000
   min_points_anthropic: 50
   huge_translation: [2589500, 1169500, 0]
@@ -31,7 +36,8 @@ preprocessing:
   cat_ground: 2 # can be a single value or a list of values
 postprocessing:
   src_transforms: default
-  absurd_dist: 5
+  absurd_dist_local: 5
+  absurd_dist_global: 20
   to_keep:
     full_tree: True
     layers: True

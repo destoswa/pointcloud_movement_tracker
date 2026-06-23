@@ -16,6 +16,10 @@ from src.icp_utils import \
 
 
 def ICP_process(conf, verbose=True):
+    if conf.data.src_res == "default":
+        conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
+    # o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
+    
     if verbose:
         print("Starting process (might take several minutes)...")
     time_tot = time()
@@ -97,8 +101,6 @@ def ICP_process(conf, verbose=True):
     # # ---
 
     for tiles, mode in zip([tiles_ground, tiles_anthropic], roots.keys()):
-        # if mode == 'ground':
-        #     continue
         # test if pointcloud empty
         if len(tiles['source'].points) == 0 and len(tiles['target'].points) == 0:
             if verbose:
@@ -110,7 +112,7 @@ def ICP_process(conf, verbose=True):
             tile.translate(np.array([-x for x in offset]))
 
         # compute normals
-        if conf.args.method == 'pointtoplane':
+        if conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground'):
             tiles['target'].estimate_normals(
                 o3d.geometry.KDTreeSearchParamHybrid(
                     radius=conf.args.pointtoplane_radius, 
@@ -149,6 +151,7 @@ def ICP_process(conf, verbose=True):
             time_subclouds_creation=time_subclouds_creation, 
             time_icp=time_icp, 
             time_subclouds_saving=time_subclouds_saving,
+            mode=mode,
             )
 
     # # --- TEMP ---
@@ -217,7 +220,8 @@ def ICP_process(conf, verbose=True):
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
             to_keep=conf.postprocessing.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='w_A0', 
             verbose=conf.postprocessing.verbose,
             )
@@ -232,7 +236,8 @@ def ICP_process(conf, verbose=True):
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
             to_keep=conf.postprocessing.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='wo_A0', 
             verbose=conf.postprocessing.verbose,
             )
@@ -257,8 +262,5 @@ def ICP_process(conf, verbose=True):
 
 if __name__ == "__main__":
     conf = OmegaConf.load("./config/one_tile.yaml")
-    if conf.data.src_res == "default":
-        conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
-    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
     ICP_process(conf, conf.args.verbose)
     

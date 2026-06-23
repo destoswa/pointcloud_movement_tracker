@@ -14,7 +14,7 @@ from src.postprocessing_utils import \
     remove_A0, find_node
 
 
-def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='', verbose=False):
+def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, absurd_dist_global=20, suffixe='', verbose=False):
     # prepare paths
     src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffixe}.gpkg"
     src_out_gpkg_leaves = src_out_gpkg.split('.gpkg')[0] + f"_leaves.gpkg"
@@ -36,7 +36,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
     # Detect absurd values
     original_len = len(root)
     time0 = time()
-    counter = detect_absurds(root, absurd_dist)
+    counter = detect_absurds(root, absurd_dist_local, absurd_dist_global)
     
     if verbose:
         print("Time to detect absurds: ", time() - time0)
@@ -62,6 +62,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
             output_path=src_out_gpkg,
             offset=offset,
             do_clip_overlaps=False,
+            verbose=verbose,
         )
 
     # Export only leaves
@@ -76,6 +77,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
         output_path=src_out_gpkg_leaves,
         offset=offset,
         do_clip_overlaps=True,
+        verbose=verbose,
     )
 
     # Layer by layer
@@ -95,7 +97,8 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
                 output_path=src_out_gpkg_layers_tiles,
                 to_export='boxes',
                 offset=offset,
-                layer_name=f"Level {lvl}"
+                layer_name=f"Level {lvl}",
+                verbose=verbose,
             )
 
             export_points_and_bboxes(
@@ -105,7 +108,8 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist=5, suffixe='
                 output_path=src_out_gpkg_layers_centers,
                 to_export='points',
                 offset=offset,
-                layer_name=f"Level {lvl}"
+                layer_name=f"Level {lvl}",
+                verbose=verbose,
             )
     
     if verbose:
@@ -136,7 +140,8 @@ if __name__ == "__main__":
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
             to_keep=conf.postprocessing.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='w_A0', 
             verbose=conf.postprocessing.verbose,
             )
@@ -151,7 +156,8 @@ if __name__ == "__main__":
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
             to_keep=conf.postprocessing.to_keep,
-            absurd_dist=conf.postprocessing.absurd_dist, 
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='wo_A0', 
             verbose=conf.postprocessing.verbose,
             )
