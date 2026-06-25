@@ -5,6 +5,8 @@ import open3d as o3d
 from time import time
 import pickle
 from omegaconf import OmegaConf
+from tqdm import tqdm
+from copy import deepcopy
 from postprocessing import postprocessing, remove_A0
 from src.icp_utils import \
     read_pc_with_cat_timming, \
@@ -14,6 +16,18 @@ from src.icp_utils import \
     find_node, \
     trim_branch
 
+
+def get_nodes_of_level(node, level):
+    list_nodes = []
+    if node.level == level:
+        return [node]
+    else:
+        for child in node.children:
+            sub_list = get_nodes_of_level(child, level)
+            list_nodes.append(sub_list)
+        list_nodes = [x for row in list_nodes for x in row]
+        return list_nodes
+    
 
 def ICP_process(conf, verbose=True):
     if conf.data.src_res == "default":
@@ -40,12 +54,13 @@ def ICP_process(conf, verbose=True):
     start = time()
     src_result_transforms = os.path.join(conf.data.src_res, f'pyramid_transforms_{conf.data.res_suffixe}.pickle')
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
-
+    time0 = time()
     tiles = {
         'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.preprocessing.list_cat_to_remove),
         'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.preprocessing.list_cat_to_remove),
     }
-
+    if verbose:
+        print("time to load: ", time() - time0)
     # Center pointclouds
     z_mean = float(np.mean(tiles['source'].z))
     offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
@@ -55,6 +70,7 @@ def ICP_process(conf, verbose=True):
         "max_bound": (tiles['source'].header.max - offset).tolist()
     }
 
+    time0 = time()
     # Process ground
     tiles_ground = {
         'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'keep'),
@@ -66,7 +82,28 @@ def ICP_process(conf, verbose=True):
         'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'remove'),
         'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'remove'),
     }
-
+    if verbose:
+        print("time to filter: ", time() - time0)
+    # pc_source = o3d.geometry.PointCloud()
+    # pc_source.points = o3d.utility.Vector3dVector(
+    #     np.stack([tiles['source'].points['X'] * tiles['source'].header.scale[0] + tiles['source'].header.offset[0],
+    #               tiles['source'].points['Y'] * tiles['source'].header.scale[1] + tiles['source'].header.offset[1],
+    #               tiles['source'].points['Z']* tiles['source'].header.scale[2] + tiles['source'].header.offset[2]], axis=1)
+    # )
+    # pc_target = o3d.geometry.PointCloud()
+    # pc_target.points = o3d.utility.Vector3dVector(
+    #     np.stack([tiles['target'].points['X'] * tiles['target'].header.scale[0] + tiles['target'].header.offset[0],
+    #               tiles['target'].points['Y'] * tiles['target'].header.scale[1] + tiles['target'].header.offset[1],
+    #               tiles['target'].points['Z'] * tiles['target'].header.scale[2] + tiles['target'].header.offset[2]], axis=1)
+    # )
+    # tiles_ground = {
+    #     'source': pc_source,
+    #     'target': pc_target,
+    # }
+    # tiles_anthropic = {
+    #     'source': o3d.geometry.PointCloud(),
+    #     'target': o3d.geometry.PointCloud(),
+    # }
     roots = {
         'ground': None,
         'anthropic': None,
@@ -138,21 +175,45 @@ def ICP_process(conf, verbose=True):
             min_points=confs[mode]['min_points'],
             is_anthropic=confs[mode]['is_anthropic'],
         )
-
+        if verbose:
+            print("time to build quadtree: ", time() - time0)
         time_quadtree_creation += time() - time0
 
+        # # === TEMP ===
+        # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
+        # with open(src_ground, 'wb')   as f:
+        #     pickle.dump(roots['ground'], f)
+        # # ===============================
+
+
         # run the ICP algorithm on every node of the tree
-        run_icp_on_tree(
-            node=roots[mode], 
-            pc_source=tiles['source'], 
-            pc_target=tiles['target'], 
-            src_res=pointcloud_res, 
-            args=conf.args, 
-            time_subclouds_creation=time_subclouds_creation, 
-            time_icp=time_icp, 
-            time_subclouds_saving=time_subclouds_saving,
-            mode=mode,
-            )
+        max_size = np.min(np.array(bbox_dict['max_bound'][:2]) - np.array(bbox_dict['min_bound'][:2]))
+        lvl_to_process = 0
+        while max_size > conf.args.max_pointcloud_size:
+            lvl_to_process += 1
+            max_size /= 2
+        lst_tiles_to_icp = get_nodes_of_level(roots[mode], lvl_to_process)
+        print(f"Processing ICP on tiles of level {lvl_to_process} and size {max_size}:")
+        for _, node in tqdm(enumerate(lst_tiles_to_icp), total=len(lst_tiles_to_icp), desc="Processing"):
+            # pc_source = deepcopy(tiles['source'])
+            # pc_source.points = pc_source.points[node.indices_src]
+            # pc_target = deepcopy(tiles['target'])
+            # pc_target.points = pc_target.points[node.indices_src]
+            # pc_target = tiles['target'][node.indices_tgt]
+            run_icp_on_tree(
+                # node=roots[mode], 
+                pc_source=tiles['source'], 
+                pc_target=tiles['target'], 
+                node=node, 
+                # pc_source=pc_source, 
+                # pc_target=pc_target, 
+                src_res=pointcloud_res, 
+                args=conf.args, 
+                time_subclouds_creation=time_subclouds_creation, 
+                time_icp=time_icp, 
+                time_subclouds_saving=time_subclouds_saving,
+                mode=mode,
+                )
 
     # # --- TEMP ---
     # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
@@ -168,8 +229,6 @@ def ICP_process(conf, verbose=True):
     anthropic_leaves = [x for x in anthropic_nodes if x.is_leaf == True]
     
     for node in anthropic_leaves:
-        # if node.id == -146799575948:
-        #     print('derp')
         if node.level == 0:
             break
         ground_node = find_node(roots['ground'], node.id)
@@ -261,6 +320,11 @@ def ICP_process(conf, verbose=True):
 
 
 if __name__ == "__main__":
+    # print(np.max(np.array([3,2,1]) - np.array([1,1,1])))
+    # list_nodes = [[1], [2,3],[4]]
+    # list_nodes = [x for row in list_nodes for x in row]
+    # print(list_nodes)
+    # quit()
     conf = OmegaConf.load("./config/one_tile.yaml")
     ICP_process(conf, conf.args.verbose)
     

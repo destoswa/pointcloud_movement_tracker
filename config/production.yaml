@@ -1,8 +1,8 @@
 production:
-  src_folder_old: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\old
-  src_folder_new: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\new
-  src_csv: default
+  src_folder_old: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\old   # path to folder containing the older point clouds
+  src_folder_new: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\new   # path to folder containing the newer point clouds
+  src_csv: default   # path to CSV pairing file (default = auto-detect from src_folder_old)
 preprocessing:
-  do_preprocessing: True
+  do_preprocessing: True                    # whether to run preprocessing to auto-pair old/new files
   pattern: "*_*_(dddd_dddd/dddd-dddd)_*"    # place here a regular expression (regex) that identify the common part of each pair
-  verbose: True
+  verbose: True                             # print preprocessing progress and matched pairs

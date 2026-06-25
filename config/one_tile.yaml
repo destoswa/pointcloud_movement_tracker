@@ -12,34 +12,37 @@ data:
   # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\gicp
   src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2001_LV95_1m.laz
   src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2015_LV95_50cm_resampAvg_1m.laz
-  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\pointtopoint
-  res_suffixe: test
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\pointtoplane
+  # src_pc1: data/test/epoch1.laz # path to the first (older) point cloud
+  # src_pc2: data/test/epoch1.laz # path to the second (newer) point cloud
+  # src_res: default              # path to the output results folder
+  res_suffixe: test             # suffix appended to result filenames
 args:
-  method: pointtopoint  # choose between pointtopoint, pointtoplane and gicp
-  pointtoplane_radius: 2.0
-  pointtoplane_max_nn: 50
-  max_iteration: 30
-  threshold: 1e-4
-  max_correspondence: 1.5 # can be a single value or a list of values
-  min_tile_size_ground: 512
-  min_tile_size_anthropic: 512
-  min_points_ground: 2000
-  min_points_anthropic: 50
-  huge_translation: [2589500, 1169500, 0]
-  category: all
-  do_output_transformed: False
-  output_level: -1 # -1 to output at each level
-  do_postprocessing: True
-  verbose: True
+  method: pointtoplane          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
+  pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
+  pointtoplane_max_nn: 50       # with "pointtoplane" method - max number of neighbors used for normal estimation
+  max_iteration: 30             # max number of ICP iterations per tile
+  threshold: 1e-4               # convergence threshold on relative fitness and RMSE
+  max_correspondence: 1.5       # max correspondence distance (m) for ICP point matching — single value or list per level
+  max_pointcloud_size: 2000     # the maximum size of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
+  min_tile_size_ground: 512     # minimum tile size (m) below which ground quadtree stops subdividing
+  min_tile_size_anthropic: 512  # minimum tile size (m) below which anthropic quadtree stops subdividing
+  min_points_ground: 2000       # minimum number of points in a tile to allow further subdivision (ground)
+  min_points_anthropic: 50      # minimum number of points in a tile to allow further subdivision (anthropic)
+  huge_translation: [2589500, 1169500, 0]   # global offset subtracted from coordinates for numerical stability (Swiss LV95)
+  do_output_transformed: False  # whether to save transformed subclouds as PLY files for debugging
+  output_level: -1              # level at which to save transformed subclouds (-1 = all levels)
+  do_postprocessing: True       # whether to run postprocessing after ICP
+  verbose: True                 # print progress and timing information
 preprocessing:
-  list_cat_to_remove: [1, 3, 9, 14, 15, 42]
-  cat_ground: 2 # can be a single value or a list of values
+  list_cat_to_remove: [1, 3, 9, 14, 15, 42]   # LAS classification codes to remove before processing
+  cat_ground: 2                               # LAS classification code for ground points — single value or list
 postprocessing:
-  src_transforms: default
-  absurd_dist_local: 5
-  absurd_dist_global: 20
+  src_transforms: default       # path to saved transforms pickle file (default = auto-detect from src_res)
+  absurd_dist_local: 5          # local 2D displacement threshold (m) above which a result is flagged as artifact
+  absurd_dist_global: 20        # global 3D displacement threshold (m) above which a result is flagged as artifact
   to_keep:
-    full_tree: True
-    layers: True
-    initial_alignment: both # choose between {'with', 'without', 'both'}
-  verbose: False
+    full_tree: True             # whether to save a GPKG with every tiles of every layer
+    layers: True                # whether to save the tiles layer by layer
+    initial_alignment: both     # whether to keep or not the alignment at lvl 0. choose between {'with', 'without', 'both'}
+  verbose: False                # print postprocessing progress information
