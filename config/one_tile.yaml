@@ -10,11 +10,11 @@ data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
   # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\gicp
-  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2001_LV95_1m.laz
-  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\PlOrbe_MNT_2015_LV95_50cm_resampAvg_1m.laz
-  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\1m\pointtoplane
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\pointtoplane
   # src_pc1: data/test/epoch1.laz # path to the first (older) point cloud
-  # src_pc2: data/test/epoch1.laz # path to the second (newer) point cloud
+  # src_pc2: data/test/epoch2.laz # path to the second (newer) point cloud
   # src_res: default              # path to the output results folder
   res_suffixe: test             # suffix appended to result filenames
 args:
@@ -25,6 +25,7 @@ args:
   threshold: 1e-4               # convergence threshold on relative fitness and RMSE
   max_correspondence: 1.5       # max correspondence distance (m) for ICP point matching — single value or list per level
   max_pointcloud_size: 2000     # the maximum size of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
+  max_area: 10  # the maximum area of the pointcloud to be process [in km^2]. Above, the pointcloud is divided into sub-pc that are processed separataly.
   min_tile_size_ground: 512     # minimum tile size (m) below which ground quadtree stops subdividing
   min_tile_size_anthropic: 512  # minimum tile size (m) below which anthropic quadtree stops subdividing
   min_points_ground: 2000       # minimum number of points in a tile to allow further subdivision (ground)

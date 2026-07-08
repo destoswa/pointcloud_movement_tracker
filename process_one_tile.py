@@ -6,7 +6,6 @@ from time import time
 import pickle
 from omegaconf import OmegaConf
 from tqdm import tqdm
-from copy import deepcopy
 from postprocessing import postprocessing, remove_A0
 from src.icp_utils import \
     read_pc_with_cat_timming, \
@@ -187,13 +186,15 @@ def ICP_process(conf, verbose=True):
 
 
         # run the ICP algorithm on every node of the tree
-        max_size = np.min(np.array(bbox_dict['max_bound'][:2]) - np.array(bbox_dict['min_bound'][:2]))
-        lvl_to_process = 0
-        while max_size > conf.args.max_pointcloud_size:
-            lvl_to_process += 1
-            max_size /= 2
+        # max_size = np.min(np.array(bbox_dict['max_bound'][:2]) - np.array(bbox_dict['min_bound'][:2]))
+        area = ((bbox_dict['max_bound'][0] - bbox_dict['min_bound'][0]) * (bbox_dict['max_bound'][1] - bbox_dict['min_bound'][1])) / 1e6
+        lvl_to_process = int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))
+        # lvl_to_process = 0
+        # while max_size > conf.args.max_pointcloud_size:
+        #     lvl_to_process += 1
+        #     max_size /= 2
         lst_tiles_to_icp = get_nodes_of_level(roots[mode], lvl_to_process)
-        print(f"Processing ICP on tiles of level {lvl_to_process} and size {max_size}:")
+        print(f"Processing ICP on tiles of level {lvl_to_process} and area {np.round(area / 4**lvl_to_process, 2)}km^2:")
         for _, node in tqdm(enumerate(lst_tiles_to_icp), total=len(lst_tiles_to_icp), desc="Processing"):
             # pc_source = deepcopy(tiles['source'])
             # pc_source.points = pc_source.points[node.indices_src]
