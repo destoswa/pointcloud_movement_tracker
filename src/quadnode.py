@@ -17,7 +17,7 @@ class QuadNode:
         self.global_transform = np.eye(4)
         self.local_transform = np.eye(4)
         self.metrics = {}
-        self.size = np.min([len(indices_src), len(indices_tgt)])
+        # self.size = np.min([len(indices_src), len(indices_tgt)])
         self.parent = parent
         self.children = []
         self.anthropic_state = 0 if is_anthropic else -1   # 0 = normal, 1 = new building, 2 = destruction

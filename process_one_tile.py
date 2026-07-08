@@ -183,6 +183,7 @@ def ICP_process(conf, verbose=True):
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
+            max_area=conf.args.max_area,
             is_anthropic=confs[mode]['is_anthropic'],
         )
         if verbose:
