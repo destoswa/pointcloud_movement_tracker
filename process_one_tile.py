@@ -148,7 +148,7 @@ def ICP_process(conf, verbose=True):
             tile.translate(np.array([-x for x in offset]))
 
         # compute normals
-        if conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground'):
+        if len(tiles['target'].points) > 0 and (conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')):
             tiles['target'].estimate_normals(
                 o3d.geometry.KDTreeSearchParamHybrid(
                     radius=conf.args.pointtoplane_radius, 
@@ -156,8 +156,19 @@ def ICP_process(conf, verbose=True):
                     ))
 
         # numpy arrays
-        xyz_src = np.asarray(tiles['source'].points)
-        xyz_tgt = np.asarray(tiles['target'].points)
+        xyz_src = np.asarray(tiles['source'].points, dtype=np.float32)
+        xyz_tgt = np.asarray(tiles['target'].points, dtype=np.float32)
+
+        area = ((bbox_dict['max_bound'][0] - bbox_dict['min_bound'][0]) * (bbox_dict['max_bound'][1] - bbox_dict['min_bound'][1])) / 1e6
+        lvl_to_process = int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))
+
+        # generate indices is root small enough
+        if area <= conf.args.max_area:
+            indices_src=np.arange(len(xyz_src), dtype=np.int32)
+            indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
+            indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
+        else:
+            indices_src, indices_tgt, indices_tgt_neigh = None, None, None
 
         # build tree
         time0 = time()
@@ -166,9 +177,9 @@ def ICP_process(conf, verbose=True):
             xyz_tgt=xyz_tgt,
             parent=None,
             bbox=bbox_dict,
-            indices_src=np.arange(len(xyz_src)),
-            indices_tgt=np.arange(len(xyz_tgt)),
-            indices_tgt_neigh=np.arange(len(xyz_tgt)),
+            indices_src=indices_src,
+            indices_tgt=indices_tgt,
+            indices_tgt_neigh=indices_tgt_neigh,
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
@@ -187,8 +198,6 @@ def ICP_process(conf, verbose=True):
 
         # run the ICP algorithm on every node of the tree
         # max_size = np.min(np.array(bbox_dict['max_bound'][:2]) - np.array(bbox_dict['min_bound'][:2]))
-        area = ((bbox_dict['max_bound'][0] - bbox_dict['min_bound'][0]) * (bbox_dict['max_bound'][1] - bbox_dict['min_bound'][1])) / 1e6
-        lvl_to_process = int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))
         # lvl_to_process = 0
         # while max_size > conf.args.max_pointcloud_size:
         #     lvl_to_process += 1

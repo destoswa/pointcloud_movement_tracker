@@ -24,8 +24,8 @@ args:
   max_iteration: 30             # max number of ICP iterations per tile
   threshold: 1e-4               # convergence threshold on relative fitness and RMSE
   max_correspondence: 1.5       # max correspondence distance (m) for ICP point matching — single value or list per level
-  max_pointcloud_size: 2000     # the maximum size of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
-  max_area: 10  # the maximum area of the pointcloud to be process [in km^2]. Above, the pointcloud is divided into sub-pc that are processed separataly.
+  max_pointcloud_size: 2000     # the maximum size (m) of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
+  max_area: 10                  # the maximum area (km^2) of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
   min_tile_size_ground: 512     # minimum tile size (m) below which ground quadtree stops subdividing
   min_tile_size_anthropic: 512  # minimum tile size (m) below which anthropic quadtree stops subdividing
   min_points_ground: 2000       # minimum number of points in a tile to allow further subdivision (ground)

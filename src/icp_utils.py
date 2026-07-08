@@ -132,7 +132,7 @@ def points_in_bbox(xyz_src, xyz_tgt, node, bbox):
 def build_quadtree(
         xyz_src, xyz_tgt, parent, bbox, 
         indices_src, indices_tgt, indices_tgt_neigh, 
-        level, min_tile_size, min_points, is_anthropic=False
+        level, min_tile_size, min_points, max_area, is_anthropic=False
         ):
     """Recursively build quadtree based on point density."""
     with warnings.catch_warnings():
@@ -142,32 +142,37 @@ def build_quadtree(
     # node.planarity = compute_planarity(xyz_src[indices_src])
 
     # stopping conditions
+    area = ((bbox['max_bound'][0] - bbox['min_bound'][0]) * (bbox['max_bound'][1] - bbox['min_bound'][1])) / 1e6
     tile_size = np.min((np.array(bbox['max_bound']) - np.array(bbox['min_bound']))[0:2])
-    if is_anthropic:
-        tile_len = np.max([len(indices_src), len(indices_tgt)])
-        if tile_len < min_points:
-            return None
-        
-        if len(indices_src) < 0.1 * len(indices_tgt) and (len(indices_tgt) < min_points or tile_size / 2 < min_tile_size):
-            node.anthropic_state = 1
-            return node
-        elif len(indices_tgt) < 0.1 * len(indices_src) and (len(indices_src) < min_points or tile_size / 2 < min_tile_size):
-            node.anthropic_state = 2
-            return node
-    else:
-        tile_len = np.min([len(indices_src), len(indices_tgt)])
-        if tile_len < min_points:
-            return node
+    if area <= max_area:
+        if is_anthropic:
+            tile_len = np.max([len(indices_src), len(indices_tgt)])
+            if tile_len < min_points:
+                return None
+            
+            if len(indices_src) < 0.1 * len(indices_tgt) and (len(indices_tgt) < min_points or tile_size / 2 < min_tile_size):
+                node.anthropic_state = 1
+                return node
+            elif len(indices_tgt) < 0.1 * len(indices_src) and (len(indices_src) < min_points or tile_size / 2 < min_tile_size):
+                node.anthropic_state = 2
+                return node
+        else:
+            tile_len = np.min([len(indices_src), len(indices_tgt)])
+            if tile_len < min_points:
+                return node
 
     sub_bboxes = compute_bbox(bbox)
 
     tile_size = np.min((np.array(sub_bboxes[0]['max_bound']) - np.array(sub_bboxes[0]['min_bound']))[0:2])
     if tile_size > min_tile_size:
         for subbbox in sub_bboxes:
-            sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
 
-            # if len(sub_idx_src) == 0 or len(sub_idx_tgt) == 0:
-            #     continue
+            # Test if children are small enough to be process
+            subarea = ((bbox['max_bound'][0] - bbox['min_bound'][0]) * (bbox['max_bound'][1] - bbox['min_bound'][1])) / 1e6
+            if subarea <= max_area:
+                sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
+            else:
+                sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = None, None, None
 
             child = build_quadtree(
                 xyz_src, xyz_tgt, node, subbbox, sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh,
