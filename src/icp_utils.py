@@ -191,7 +191,7 @@ def build_quadtree(
     return node
 
 
-def extract_subcloud(pc, indices):
+def extract_subcloud(pc, indices, pointtoplane_args=None):
     """Return a sub pointcloud from indices (including normals if available)."""
     
     sub_pc = o3d.geometry.PointCloud()
@@ -199,15 +199,23 @@ def extract_subcloud(pc, indices):
     pts = np.asarray(pc.points)
     sub_pc.points = o3d.utility.Vector3dVector(pts[indices])
 
-    # Copy normals if they exist
-    if pc.has_normals():
-        normals = np.asarray(pc.normals)
-        sub_pc.normals = o3d.utility.Vector3dVector(normals[indices])
+    if isinstance(pointtoplane_args, dict):
+        if pointtoplane_args['do_compute_normals']:
+            sub_pc.estimate_normals(
+                o3d.geometry.KDTreeSearchParamHybrid(
+                    radius=pointtoplane_args['radius'], 
+                    max_nn=pointtoplane_args['max_nn'],
+                    )
+                )
+    # # Copy normals if they exist
+    # if pc.has_normals():
+    #     normals = np.asarray(pc.normals)
+    #     sub_pc.normals = o3d.utility.Vector3dVector(normals[indices])
 
     return sub_pc
 
 
-def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving, mode='ground'):
+def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving, pointtoplane_args, mode='ground'):
     """Traverse tree and run ICP on each node."""
     if node == None:
         return
@@ -216,7 +224,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     time_sub_0 = time()
     pc_tgt_neigh = extract_subcloud(pc_target, node.indices_tgt_neigh)
-    pc_tgt = extract_subcloud(pc_target, node.indices_tgt)
+    pc_tgt = extract_subcloud(pc_target, node.indices_tgt, pointtoplane_args)
     pc_src = extract_subcloud(pc_source, node.indices_src)
     time_subclouds_creation.append(time() - time_sub_0)
 
@@ -309,7 +317,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     node.indices_tgt_neigh = None
 
     for child in node.children:
-        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving, mode=mode)
+        run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving,  pointtoplane_args, mode=mode)
 
 
 def filter_las_by_classification(las, classification_value, field_names, mode):

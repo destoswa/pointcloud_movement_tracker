@@ -44,6 +44,7 @@ def ICP_process(conf, verbose=True):
             raise AttributeError(f"The path given for pc{id_pc} is wrong!") from None
     # === PREPROCESSING ===
 
+
     # === PROCESSING ===
     # prepare results
     os.makedirs(conf.data.src_res, exist_ok=True)
@@ -174,12 +175,14 @@ def ICP_process(conf, verbose=True):
             tile.translate(np.array([-x for x in offset]))
 
         # compute normals
-        if len(tiles['target'].points) > 0 and (conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')):
-            tiles['target'].estimate_normals(
-                o3d.geometry.KDTreeSearchParamHybrid(
-                    radius=conf.args.pointtoplane_radius, 
-                    max_nn=conf.args.pointtoplane_max_nn,
-                    ))
+        do_compute_normals = conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')
+        # if len(tiles['target'].points) > 0 and (conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')):
+        # if do_compute_normals:
+        #     tiles['target'].estimate_normals(
+        #         o3d.geometry.KDTreeSearchParamHybrid(
+        #             radius=conf.args.pointtoplane_radius, 
+        #             max_nn=conf.args.pointtoplane_max_nn,
+        #             ))
 
         # numpy arrays
         xyz_src = np.asarray(tiles['source'].points, dtype=np.float32)
@@ -249,6 +252,11 @@ def ICP_process(conf, verbose=True):
                 time_subclouds_creation=time_subclouds_creation, 
                 time_icp=time_icp, 
                 time_subclouds_saving=time_subclouds_saving,
+                pointtoplane_args={
+                    "do_compute_normals": do_compute_normals,
+                    "radius": conf.args.pointtoplane_radius,
+                    "max_nn": conf.args.pointtoplane_max_nn,
+                },
                 mode=mode,
                 )
 
