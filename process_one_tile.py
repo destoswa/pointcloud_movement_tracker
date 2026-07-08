@@ -42,6 +42,7 @@ def ICP_process(conf, verbose=True):
             assert os.path.exists(pc)
         except:
             raise AttributeError(f"The path given for pc{id_pc} is wrong!") from None
+    # === PREPROCESSING ===
 
     # === PROCESSING ===
     # prepare results
@@ -55,11 +56,12 @@ def ICP_process(conf, verbose=True):
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
     time0 = time()
     tiles = {
-        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.preprocessing.list_cat_to_remove),
-        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.preprocessing.list_cat_to_remove),
+        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.categories.list_cat_to_remove),
+        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.categories.list_cat_to_remove),
     }
     if verbose:
         print("time to load: ", time() - time0)
+    
     # Center pointclouds
     z_mean = float(np.mean(tiles['source'].z))
     offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
@@ -70,17 +72,41 @@ def ICP_process(conf, verbose=True):
     }
 
     time0 = time()
-    # Process ground
-    tiles_ground = {
-        'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'keep'),
-        'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'keep'),
-    }
 
-    # Process anthropic
-    tiles_anthropic = {
-        'source': filter_las_by_classification(tiles['source'], conf.preprocessing.cat_ground, 'remove'),
-        'target': filter_las_by_classification(tiles['target'], conf.preprocessing.cat_ground, 'remove'),
-    }
+    # Process categories
+    if conf.categories.split_ground_anthropic:
+        # Process ground
+        tiles_ground = {
+            'source': filter_las_by_classification(tiles['source'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
+            'target': filter_las_by_classification(tiles['target'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
+        }
+
+        # Process anthropic
+        tiles_anthropic = {
+            'source': filter_las_by_classification(tiles['source'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
+            'target': filter_las_by_classification(tiles['target'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
+        }
+    else:
+        pc_source = o3d.geometry.PointCloud()
+        pc_source.points = o3d.utility.Vector3dVector(
+            np.stack([getattr(tiles['source'], conf.args.field_names[0]) * tiles['source'].header.scale[0] + tiles['source'].header.offset[0],
+                    getattr(tiles['source'], conf.args.field_names[1]) * tiles['source'].header.scale[1] + tiles['source'].header.offset[1],
+                    getattr(tiles['source'], conf.args.field_names[2]) * tiles['source'].header.scale[2] + tiles['source'].header.offset[2]], axis=1)
+        )
+        pc_target = o3d.geometry.PointCloud()
+        pc_target.points = o3d.utility.Vector3dVector(
+            np.stack([getattr(tiles['target'], conf.args.field_names[0]) * tiles['target'].header.scale[0] + tiles['target'].header.offset[0],
+                    getattr(tiles['target'], conf.args.field_names[1]) * tiles['target'].header.scale[1] + tiles['target'].header.offset[1],
+                    getattr(tiles['target'], conf.args.field_names[2]) * tiles['target'].header.scale[2] + tiles['target'].header.offset[2]], axis=1)
+        )
+        tiles_ground = {
+            'source': pc_source,
+            'target': pc_target,
+        }
+        tiles_anthropic = {
+            'source': o3d.geometry.PointCloud(),
+            'target': o3d.geometry.PointCloud(),
+        }
     if verbose:
         print("time to filter: ", time() - time0)
     # pc_source = o3d.geometry.PointCloud()
@@ -110,13 +136,13 @@ def ICP_process(conf, verbose=True):
 
     confs = {
         'ground': {
-            'min_points': conf.args.min_points_ground,
-            'min_tile_size': conf.args.min_tile_size_ground,
+            'min_points': conf.categories.min_points_ground,
+            'min_tile_size': conf.categories.min_tile_size_ground,
             'is_anthropic': False,
         },
         'anthropic': {
-            'min_points': conf.args.min_points_anthropic,
-            'min_tile_size': conf.args.min_tile_size_anthropic,
+            'min_points': conf.categories.min_points_anthropic,
+            'min_tile_size': conf.categories.min_tile_size_anthropic,
             'is_anthropic': True,
         },
     }
@@ -236,26 +262,27 @@ def ICP_process(conf, verbose=True):
     # # ---
 
     # replace nodes in ground by leaves in buildings
-    anthropic_nodes = node_to_list(roots['anthropic'])
-    anthropic_leaves = [x for x in anthropic_nodes if x.is_leaf == True]
-    
-    for node in anthropic_leaves:
-        if node.level == 0:
-            break
-        ground_node = find_node(roots['ground'], node.id)
-        if ground_node != None:
-            parent = ground_node.parent
-            trim_branch(ground_node)
-            parent.children.append(node)
-            node.parent = parent
-        else:
-            while ground_node == None:
-                child = node
-                node = node.parent
-                ground_node = find_node(roots['ground'], node.id)
-            ground_node.children.append(child)
-            child.parent = ground_node
-            ground_node.is_leaf = True
+    if conf.categories.split_ground_anthropic:
+        anthropic_nodes = node_to_list(roots['anthropic'])
+        anthropic_leaves = [x for x in anthropic_nodes if x.is_leaf == True]
+        
+        for node in anthropic_leaves:
+            if node.level == 0:
+                break
+            ground_node = find_node(roots['ground'], node.id)
+            if ground_node != None:
+                parent = ground_node.parent
+                trim_branch(ground_node)
+                parent.children.append(node)
+                node.parent = parent
+            else:
+                while ground_node == None:
+                    child = node
+                    node = node.parent
+                    ground_node = find_node(roots['ground'], node.id)
+                ground_node.children.append(child)
+                child.parent = ground_node
+                ground_node.is_leaf = True 
 
     # save final root
     with open(src_result_transforms, 'wb') as f:
