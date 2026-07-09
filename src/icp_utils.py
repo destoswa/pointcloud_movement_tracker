@@ -9,12 +9,12 @@ if __name__ != "__main__":
 import warnings
 
 
-def read_pc_with_cat_timming(src_pc, list_cat_to_remove):
+def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_remove):
     ext = os.path.splitext(src_pc)[1].lower()
     if ext in ['.las', '.laz']:
         pc = laspy.read(src_pc)
         mask = np.ones(len(pc), dtype=np.bool_)
-        Classification = getattr(pc, "classification")
+        Classification = getattr(pc, cat_field)
         for val in list_cat_to_remove:
             mask[Classification == val] = False
         pc.points = pc.points[mask]
@@ -207,10 +207,6 @@ def extract_subcloud(pc, indices, pointtoplane_args=None):
                     max_nn=pointtoplane_args['max_nn'],
                     )
                 )
-    # # Copy normals if they exist
-    # if pc.has_normals():
-    #     normals = np.asarray(pc.normals)
-    #     sub_pc.normals = o3d.utility.Vector3dVector(normals[indices])
 
     return sub_pc
 
@@ -220,10 +216,10 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     if node == None:
         return
 
-    x,y,_ = node.bbox['min_bound']
+    x, y, _ = node.bbox['min_bound']
 
     time_sub_0 = time()
-    pc_tgt_neigh = extract_subcloud(pc_target, node.indices_tgt_neigh)
+    pc_tgt_neigh = extract_subcloud(pc_target, node.indices_tgt_neigh, pointtoplane_args)
     pc_tgt = extract_subcloud(pc_target, node.indices_tgt, pointtoplane_args)
     pc_src = extract_subcloud(pc_source, node.indices_src)
     time_subclouds_creation.append(time() - time_sub_0)
@@ -398,6 +394,18 @@ def trim_branch(node):
     node.parent = None
     node.children = []
 
+
+def get_nodes_of_level(node, level):
+    list_nodes = []
+    if node.level == level:
+        return [node]
+    else:
+        for child in node.children:
+            sub_list = get_nodes_of_level(child, level)
+            list_nodes.append(sub_list)
+        list_nodes = [x for row in list_nodes for x in row]
+        return list_nodes
+    
 
 if __name__ == "__main__":
     a = np.array([0, 1, 2, 1, 0])

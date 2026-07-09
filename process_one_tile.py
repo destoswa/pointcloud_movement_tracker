@@ -13,37 +13,48 @@ from src.icp_utils import \
     build_quadtree, run_icp_on_tree, \
     node_to_list, \
     find_node, \
-    trim_branch
+    trim_branch, \
+    get_nodes_of_level
+from src.format_conversions import convert_one_file
 
-
-def get_nodes_of_level(node, level):
-    list_nodes = []
-    if node.level == level:
-        return [node]
-    else:
-        for child in node.children:
-            sub_list = get_nodes_of_level(child, level)
-            list_nodes.append(sub_list)
-        list_nodes = [x for row in list_nodes for x in row]
-        return list_nodes
-    
 
 def ICP_process(conf, verbose=True):
     if conf.data.src_res == "default":
         conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
-    # o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
+    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
     
     if verbose:
         print("Starting process (might take several minutes)...")
     time_tot = time()
+
     # test if files exist
     for id_pc, pc in enumerate([conf.data.src_pc1, conf.data.src_pc2]):
         try:
             assert os.path.exists(pc)
         except:
             raise AttributeError(f"The path given for pc{id_pc} is wrong!") from None
+        
     # === PREPROCESSING ===
+    pointcloud_formats = [os.path.splitext(x)[1][1:] for x in [conf.data.src_pc1, conf.data.src_pc2]]
+    files_to_remove = []
+    if not all([x.lower() in ['las', 'laz'] for x in pointcloud_formats]):
+        for pc_key, format in zip(['data.src_pc1', 'data.src_pc2'], pointcloud_formats):
+            if format not in ['las', 'laz']:
+                src_file_original = OmegaConf.select(conf, pc_key)
+                if verbose:
+                    print(f"Converting following file into LAZ: {src_file_original}")
+                src_file_out = os.path.splitext(src_file_original)[0] + '.laz'
 
+                convert_one_file(
+                    src_file_in=src_file_original,
+                    src_file_out=src_file_out,
+                    in_type=format,
+                    out_type='laz'
+                )
+
+                OmegaConf.update(conf, pc_key, src_file_out)
+
+                files_to_remove.append(src_file_out)
 
     # === PROCESSING ===
     # prepare results
@@ -56,20 +67,24 @@ def ICP_process(conf, verbose=True):
     src_result_transforms = os.path.join(conf.data.src_res, f'pyramid_transforms_{conf.data.res_suffixe}.pickle')
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
     time0 = time()
-    tiles = {
-        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.categories.list_cat_to_remove),
-        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.categories.list_cat_to_remove),
+    tiles_original = {
+        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], conf.categories.list_cat_to_remove),
+        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], conf.categories.list_cat_to_remove),
     }
     if verbose:
         print("time to load: ", time() - time0)
     
+    # Remove translated files
+    for file_src in files_to_remove:
+        os.remove(file_src)
+
     # Center pointclouds
-    z_mean = float(np.mean(tiles['source'].z))
+    z_mean = float(np.mean(tiles_original['source'].z))
     offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
 
     bbox_dict = {
-        "min_bound": (tiles['source'].header.min - offset).tolist(),
-        "max_bound": (tiles['source'].header.max - offset).tolist()
+        "min_bound": (tiles_original['source'].header.min - offset).tolist(),
+        "max_bound": (tiles_original['source'].header.max - offset).tolist()
     }
 
     time0 = time()
@@ -78,62 +93,48 @@ def ICP_process(conf, verbose=True):
     if conf.categories.split_ground_anthropic:
         # Process ground
         tiles_ground = {
-            'source': filter_las_by_classification(tiles['source'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
-            'target': filter_las_by_classification(tiles['target'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
+            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
+            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
         }
 
         # Process anthropic
         tiles_anthropic = {
-            'source': filter_las_by_classification(tiles['source'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
-            'target': filter_las_by_classification(tiles['target'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
+            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
+            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
         }
+
+        roots = {
+            'ground': None,
+            'anthropic': None,
+        }
+
+        tiles_to_process = [tiles_ground, tiles_anthropic]
     else:
         pc_source = o3d.geometry.PointCloud()
         pc_source.points = o3d.utility.Vector3dVector(
-            np.stack([getattr(tiles['source'], conf.args.field_names[0]) * tiles['source'].header.scale[0] + tiles['source'].header.offset[0],
-                    getattr(tiles['source'], conf.args.field_names[1]) * tiles['source'].header.scale[1] + tiles['source'].header.offset[1],
-                    getattr(tiles['source'], conf.args.field_names[2]) * tiles['source'].header.scale[2] + tiles['source'].header.offset[2]], axis=1)
+            np.stack([getattr(tiles_original['source'], conf.args.field_names[0]) * tiles_original['source'].header.scale[0] + tiles_original['source'].header.offset[0],
+                    getattr(tiles_original['source'], conf.args.field_names[1]) * tiles_original['source'].header.scale[1] + tiles_original['source'].header.offset[1],
+                    getattr(tiles_original['source'], conf.args.field_names[2]) * tiles_original['source'].header.scale[2] + tiles_original['source'].header.offset[2]], axis=1)
         )
         pc_target = o3d.geometry.PointCloud()
         pc_target.points = o3d.utility.Vector3dVector(
-            np.stack([getattr(tiles['target'], conf.args.field_names[0]) * tiles['target'].header.scale[0] + tiles['target'].header.offset[0],
-                    getattr(tiles['target'], conf.args.field_names[1]) * tiles['target'].header.scale[1] + tiles['target'].header.offset[1],
-                    getattr(tiles['target'], conf.args.field_names[2]) * tiles['target'].header.scale[2] + tiles['target'].header.offset[2]], axis=1)
+            np.stack([getattr(tiles_original['target'], conf.args.field_names[0]) * tiles_original['target'].header.scale[0] + tiles_original['target'].header.offset[0],
+                    getattr(tiles_original['target'], conf.args.field_names[1]) * tiles_original['target'].header.scale[1] + tiles_original['target'].header.offset[1],
+                    getattr(tiles_original['target'], conf.args.field_names[2]) * tiles_original['target'].header.scale[2] + tiles_original['target'].header.offset[2]], axis=1)
         )
         tiles_ground = {
             'source': pc_source,
             'target': pc_target,
         }
-        tiles_anthropic = {
-            'source': o3d.geometry.PointCloud(),
-            'target': o3d.geometry.PointCloud(),
+
+        tiles_to_process = [tiles_ground]
+
+        roots = {
+            'ground': None,
         }
+
     if verbose:
         print("time to filter: ", time() - time0)
-    # pc_source = o3d.geometry.PointCloud()
-    # pc_source.points = o3d.utility.Vector3dVector(
-    #     np.stack([tiles['source'].points['X'] * tiles['source'].header.scale[0] + tiles['source'].header.offset[0],
-    #               tiles['source'].points['Y'] * tiles['source'].header.scale[1] + tiles['source'].header.offset[1],
-    #               tiles['source'].points['Z']* tiles['source'].header.scale[2] + tiles['source'].header.offset[2]], axis=1)
-    # )
-    # pc_target = o3d.geometry.PointCloud()
-    # pc_target.points = o3d.utility.Vector3dVector(
-    #     np.stack([tiles['target'].points['X'] * tiles['target'].header.scale[0] + tiles['target'].header.offset[0],
-    #               tiles['target'].points['Y'] * tiles['target'].header.scale[1] + tiles['target'].header.offset[1],
-    #               tiles['target'].points['Z'] * tiles['target'].header.scale[2] + tiles['target'].header.offset[2]], axis=1)
-    # )
-    # tiles_ground = {
-    #     'source': pc_source,
-    #     'target': pc_target,
-    # }
-    # tiles_anthropic = {
-    #     'source': o3d.geometry.PointCloud(),
-    #     'target': o3d.geometry.PointCloud(),
-    # }
-    roots = {
-        'ground': None,
-        'anthropic': None,
-    }
 
     confs = {
         'ground': {
@@ -163,7 +164,7 @@ def ICP_process(conf, verbose=True):
     #     roots['anthropic'] = pickle.load(f)
     # # ---
 
-    for tiles, mode in zip([tiles_ground, tiles_anthropic], roots.keys()):
+    for tiles, mode in zip(tiles_to_process, roots.keys()):
         # test if pointcloud empty
         if len(tiles['source'].points) == 0 and len(tiles['target'].points) == 0:
             if verbose:
@@ -174,24 +175,14 @@ def ICP_process(conf, verbose=True):
         for tile in tiles.values():
             tile.translate(np.array([-x for x in offset]))
 
-        # compute normals
-        do_compute_normals = conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')
-        # if len(tiles['target'].points) > 0 and (conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')):
-        # if do_compute_normals:
-        #     tiles['target'].estimate_normals(
-        #         o3d.geometry.KDTreeSearchParamHybrid(
-        #             radius=conf.args.pointtoplane_radius, 
-        #             max_nn=conf.args.pointtoplane_max_nn,
-        #             ))
-
-        # numpy arrays
+        # extract points in arrays
         xyz_src = np.asarray(tiles['source'].points, dtype=np.float32)
         xyz_tgt = np.asarray(tiles['target'].points, dtype=np.float32)
 
         area = ((bbox_dict['max_bound'][0] - bbox_dict['min_bound'][0]) * (bbox_dict['max_bound'][1] - bbox_dict['min_bound'][1])) / 1e6
-        lvl_to_process = int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))
+        lvl_to_process = max([0, int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))])
 
-        # generate indices is root small enough
+        # generate indices if root small enough
         if area <= conf.args.max_area:
             indices_src=np.arange(len(xyz_src), dtype=np.int32)
             indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
@@ -225,38 +216,29 @@ def ICP_process(conf, verbose=True):
         #     pickle.dump(roots['ground'], f)
         # # ===============================
 
-
+        # arguments for normal computation
+        do_compute_normals = conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')
+        args_normal = {
+            "do_compute_normals": do_compute_normals,
+            "radius": conf.args.pointtoplane_radius,
+            "max_nn": conf.args.pointtoplane_max_nn,
+            }
+        
         # run the ICP algorithm on every node of the tree
-        # max_size = np.min(np.array(bbox_dict['max_bound'][:2]) - np.array(bbox_dict['min_bound'][:2]))
-        # lvl_to_process = 0
-        # while max_size > conf.args.max_pointcloud_size:
-        #     lvl_to_process += 1
-        #     max_size /= 2
         lst_tiles_to_icp = get_nodes_of_level(roots[mode], lvl_to_process)
-        print(f"Processing ICP on tiles of level {lvl_to_process} and area {np.round(area / 4**lvl_to_process, 2)}km^2:")
-        for _, node in tqdm(enumerate(lst_tiles_to_icp), total=len(lst_tiles_to_icp), desc="Processing"):
-            # pc_source = deepcopy(tiles['source'])
-            # pc_source.points = pc_source.points[node.indices_src]
-            # pc_target = deepcopy(tiles['target'])
-            # pc_target.points = pc_target.points[node.indices_src]
-            # pc_target = tiles['target'][node.indices_tgt]
+        if verbose:
+            print(f"Processing ICP on {len(lst_tiles_to_icp)} tile{'s' if len(lst_tiles_to_icp) > 1 else ''} of level {lvl_to_process} and area {np.round(area / 4**lvl_to_process, 2)}km^2:")
+        for _, node in tqdm(enumerate(lst_tiles_to_icp), total=len(lst_tiles_to_icp), desc="Processing", disable=verbose==False):
             run_icp_on_tree(
-                # node=roots[mode], 
                 pc_source=tiles['source'], 
                 pc_target=tiles['target'], 
                 node=node, 
-                # pc_source=pc_source, 
-                # pc_target=pc_target, 
                 src_res=pointcloud_res, 
                 args=conf.args, 
                 time_subclouds_creation=time_subclouds_creation, 
                 time_icp=time_icp, 
                 time_subclouds_saving=time_subclouds_saving,
-                pointtoplane_args={
-                    "do_compute_normals": do_compute_normals,
-                    "radius": conf.args.pointtoplane_radius,
-                    "max_nn": conf.args.pointtoplane_max_nn,
-                },
+                pointtoplane_args=args_normal,
                 mode=mode,
                 )
 
@@ -366,11 +348,6 @@ def ICP_process(conf, verbose=True):
 
 
 if __name__ == "__main__":
-    # print(np.max(np.array([3,2,1]) - np.array([1,1,1])))
-    # list_nodes = [[1], [2,3],[4]]
-    # list_nodes = [x for row in list_nodes for x in row]
-    # print(list_nodes)
-    # quit()
     conf = OmegaConf.load("./config/one_tile.yaml")
     ICP_process(conf, conf.args.verbose)
     

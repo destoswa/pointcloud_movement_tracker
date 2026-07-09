@@ -85,7 +85,7 @@ def process_all_in_folder(conf, conf_one_tile, verbose):
             conf.preprocessing.pattern, 
             conf.preprocessing.verbose,
             )
-    quit()
+
     df_tiles = pd.read_csv(conf.production.src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles)):

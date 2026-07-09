@@ -7,9 +7,9 @@ data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_3_real_movement_artificial_spacing\all_tiles\2588_1169\laz\PC2015_2588_1169.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2588-1169_2056_5728.las
   # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_29_final_model_on_artif\18-24\2589-1169\mix
-  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_MNT25_reprojLV95_25m.laz
-  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
-  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\gicp
+  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_31_wrong_file_format\swisssurface3d_2018_2588-1169_2056_5728.ply
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_31_wrong_file_format\swisssurface3d_2024_2588-1169_2056_5728.ply
+  # src_res: default
   src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
   src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\pointtoplane
@@ -17,7 +17,7 @@ data:
   # src_pc2: data/test/epoch2.laz # path to the second (newer) point cloud
   # src_res: default              # path to the output results folder
   res_suffixe: test             # suffix appended to result filenames
-  input_formats: [laz, laz]     # file format of pc1 and pc2 respectively
+  input_formats: [ply, ply]     # file format of pc1 and pc2 respectively
 args:
   method: pointtoplane          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
   pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
@@ -35,7 +35,7 @@ args:
   verbose: True                 # print progress and timing information
 categories:
   list_cat_to_remove: [1, 3, 9, 14, 15, 42]   # LAS classification codes to remove before processing
-  split_ground_anthropic: True # Whether to process separataly (True) or not (False) the ground and the anthropic
+  split_ground_anthropic: False # Whether to process separataly (True) or not (False) the ground and the anthropic
   cat_ground: 2                 # LAS classification code for ground points — single value or list
   min_tile_size_ground: 512     # minimum tile size (m) below which ground quadtree stops subdividing
   min_tile_size_anthropic: 512  # minimum tile size (m) below which anthropic quadtree stops subdividing
@@ -49,4 +49,4 @@ postprocessing:
     full_tree: True             # whether to save a GPKG with every tiles of every layer
     layers: True                # whether to save the tiles layer by layer
     initial_alignment: both     # whether to keep or not the alignment at lvl 0. choose between {'with', 'without', 'both'}
-  verbose: False                # print postprocessing progress information
+  verbose: True                # print postprocessing progress information

@@ -37,6 +37,21 @@ This project implements a Python pipeline for detecting and quantifying local su
 ## Algorithm + architecture
 The core of the pipeline relies on an adaptive quadtree spatial decomposition combined with the Iterative Closest Point (ICP) algorithm from Open3D, allowing displacement to be estimated at multiple spatial resolutions simultaneously. For each tile of the quadtree, a local ICP registration is computed and the resulting transformation is decomposed into physically meaningful quantities: displacement direction, plunge, magnitude, topple direction, and rotation angle. Results are exported as GIS-compatible layers (GeoPackage) for direct visualization and analysis in QGIS, including heatmaps, vector fields, and labeled polygon tiles.
 
+## Data
+### File Formats
+This project has been developped using the files of the SwissSurface3D database of Swisstopo. Hence, the default file extension is LAS/LAZ.
+However, in order to allow it to be as versatile as possible, an automatic preprocessing will convert any file with extension PLY, NPZ, PCD or TXT. If the convertion fails, please try to convert the file into LAZ before using the scripts.
+
+### Fields names
+To access the necessary information, the script will try to read the following fields:
+- 'X': position along the cartesian axis X
+- 'Y': position along the cartesian axis Y
+- 'Z': position along the cartesian axis Z
+- 'category': attribute a type of landuse to each points. This field is used to remove the unnecessary layers (e.g. vegetation) and split the ground from the anthopic layers. \
+
+Those names are not hard-coded and can be changed in the config file `config\one_tile.yaml`.
+
+
 ## How to use
 Different scripts are available to process a single file, to rework the postprocessing or to automatically process a serie of files.
 
