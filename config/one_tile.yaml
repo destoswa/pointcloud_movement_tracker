@@ -12,10 +12,10 @@ data:
   # src_res: default
   src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
-  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\pointtoplane
+  # src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\pointtoplane
   # src_pc1: data/test/epoch1.laz # path to the first (older) point cloud
   # src_pc2: data/test/epoch2.laz # path to the second (newer) point cloud
-  # src_res: default              # path to the output results folder
+  src_res: default              # path to the output results folder
   res_suffixe: test             # suffix appended to result filenames
   input_formats: [ply, ply]     # file format of pc1 and pc2 respectively
 args:

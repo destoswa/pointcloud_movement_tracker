@@ -291,7 +291,7 @@ def ICP_process(conf, verbose=True):
         print(f"\t Time to ICP: {int(np.sum(time_icp))}s")
 
 
-    # === POSTPROCESSING ===
+    # === POSTPROCESSING ===    
     if conf.args.do_postprocessing:
         time_postprocess = time()
         if verbose:
