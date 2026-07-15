@@ -72,7 +72,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, output_csv, pattern_temp
                 print(f"  [{key}] {f}")
 
 
-def process_all_in_folder(conf, conf_one_tile, verbose):
+def production(conf, conf_one_tile, verbose):
     if conf.production.src_csv == 'default':
         conf.production.src_csv = os.path.join(os.path.dirname(conf.production.src_folder_old), 'list_tiles.csv')
 
@@ -101,4 +101,4 @@ if __name__ == "__main__":
     conf_one_tile = OmegaConf.load('./config/one_tile.yaml')
 
     # Prepare csv
-    process_all_in_folder(conf_prod, conf_one_tile, verbose)
+    production(conf_prod, conf_one_tile, verbose)
