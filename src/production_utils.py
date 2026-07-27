@@ -1,26 +1,8 @@
 import os
 import re
 from pathlib import Path
-
-# --------------------------------
-# Convert pattern template to regex
-# --------------------------------
-# def template_to_regex(template):
-#     """Convert pattern like *_*_dddd_dddd_* to a regex with a capture group"""
-#     # Escape dots, then replace 'd' groups with \d{n} and '*' with .*
-#     parts = template.split("_")
-#     regex_parts = []
-#     key_group_indices = []
-#     for i, part in enumerate(parts):
-#         if re.fullmatch(r'd+', part):
-#             # This is a digit group → part of the matching key
-#             regex_parts.append(rf'(\d{{{len(part)}}})')
-#             key_group_indices.append(i)
-#         elif part == '*':
-#             regex_parts.append(r'[^_]+')
-#         else:
-#             regex_parts.append(re.escape(part))
-#     return '_'.join(regex_parts), key_group_indices
+import csv
+import re
 
 
 def template_to_regex(template):
@@ -83,9 +65,6 @@ def template_to_regex(template):
     return '_'.join(regex_parts)
 
 
-# --------------------------------
-# Extract key from filename
-# --------------------------------
 def extract_key(filename, regex):
     # Remove all extensions (handles .copc.laz etc.)
     stem = filename
@@ -99,9 +78,7 @@ def extract_key(filename, regex):
         return "_".join([x for x in match.groups() if x])
     return None
 
-# --------------------------------
-# Index files in each folder
-# --------------------------------
+
 def index_folder(folder, regex):
     index = {}
     for f in Path(folder).iterdir():
@@ -110,3 +87,68 @@ def index_folder(folder, regex):
             if key:
                 index[key] = f.name
     return index
+
+
+def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pattern_template, verbose=False):
+    # --------------------------------
+    # SETTINGS
+    # --------------------------------
+
+    # Pattern: *_*_dddd_dddd_* → captures the two 4-digit codes as the matching key
+    # d = digit, * = anything
+    # pattern_template = "*_*_dddd_dddd_*"
+
+    regex_str = template_to_regex(pattern_template)
+    regex = re.compile(regex_str, re.IGNORECASE)
+
+    index1 = index_folder(src_folder_old, regex)
+    index2 = index_folder(src_folder_new, regex)
+
+    # --------------------------------
+    # Match pairs
+    # --------------------------------
+    all_keys = set(index1.keys()) | set(index2.keys())
+
+    matched = []
+    unmatched1 = []
+    unmatched2 = []
+
+    for key in sorted(all_keys):
+        f1 = index1.get(key)
+        f2 = index2.get(key)
+        if f1 and f2:
+            matched.append((key, f1, f2))
+        elif f1:
+            unmatched1.append((key, f1))
+        else:
+            unmatched2.append((key, f2))
+
+    # --------------------------------
+    # Write CSV
+    # --------------------------------
+    src_res = os.path.join(os.path.dirname(src_folder_old), 'results') if src_res == 'default' else src_res
+    with open(output_csv, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=';')
+        writer.writerow(['key', 'pc1', 'pc2', 'res', 'status'])
+        for key, f1, f2 in matched:
+            writer.writerow([key, f1, f2, os.path.join(src_res, f'{key}_res'), 'matched'])
+        for key, f1 in unmatched1:
+            writer.writerow([key, f1, '', '', 'no_pc2'])
+        for key, f2 in unmatched2:
+            writer.writerow([key, '', f2, '', 'no_pc1'])
+
+    # --------------------------------
+    # Summary
+    # --------------------------------
+    if verbose:
+        print(f"Matched pairs : {len(matched)}")
+        print(f"Only in folder1: {len(unmatched1)}")
+        print(f"Only in folder2: {len(unmatched2)}")
+        if unmatched1:
+            print("\nNo match in folder2:")
+            for key, f in unmatched1:
+                print(f"  [{key}] {f}")
+        if unmatched2:
+            print("\nNo match in folder1:")
+            for key, f in unmatched2:
+                print(f"  [{key}] {f}")

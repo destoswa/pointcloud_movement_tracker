@@ -17,7 +17,7 @@ data:
   # src_pc2: data/test/epoch2.laz # path to the second (newer) point cloud
   src_res: default              # path to the output results folder
   res_suffixe: test             # suffix appended to result filenames
-  input_formats: [ply, ply]     # file format of pc1 and pc2 respectively
+  # input_formats: [ply, ply]     # file format of pc1 and pc2 respectively
 args:
   method: mix          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
   pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
