@@ -1,15 +1,8 @@
-import sys
-import os
 import traceback
-from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QLabel, QLineEdit, QTextEdit, QPlainTextEdit
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, Qt, QTimer
-from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWidgets import QMainWindow, QFileDialog
 from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
-from tkinter import messagebox
 from ast import literal_eval
-import traceback as tb
-from pathvalidate import sanitize_filepath
 
 from src.gui.utils import *
 
@@ -26,7 +19,7 @@ class AdvancedOptions(QMainWindow):
         # --- Connections ---
         self.btn_data_dest.clicked.connect(lambda: self._browse_folder(self.le_data_dest))
         self.btn_post_dest.clicked.connect(lambda: self._browse_folder(self.le_post_dest))
-        self.btn_apply.clicked.connect(self._validate)
+        self.btn_apply.clicked.connect(self._apply_changes)
         self.btn_cancel.clicked.connect(self._cancel)
 
         # --- Initial state of objects ---
@@ -59,79 +52,49 @@ class AdvancedOptions(QMainWindow):
         self.le_absurd_dist_local.setText(str(self.conf.postprocessing.absurd_dist_local))
         self.le_absurd_dist_global.setText(str(self.conf.postprocessing.absurd_dist_global))
 
-    # def closeEvent(self, event):
-    #     try:
-    #         self._apply_changes()
-    #         super().closeEvent(event)  # only accept/close if no error
-    #     except Exception:
-    #         tb = traceback.format_exc()
-    #         parent = self.parent()
-    #         if parent is not None and hasattr(parent, "log_box"):
-    #             parent.log_box.insertPlainText(tb)
-    #             self.blink_timer = Blinker(parent.log_box, color_on="red", interval_ms=300, duration_ms=3000)
-    #             self.blink_timer.start()
-    #             # try:
-    #             #     self.scrollArea.ensureWidgetVisible(self.le_data_dest, xMargin=10, yMargin=10)
-    #             # except Exception:
-    #             #     tb2 = traceback.format_exc()
-    #             #     print(tb2)
-    #         else:
-    #             print(tb)
-    #         event.ignore()  # keep the window open
     def closeEvent(self, event):
         super().closeEvent(event)  # only accept/close if no error
 
     def _cancel(self):
         self.close()
 
-    def _validate(self):
-        try:
-            self._apply_changes()
-            self.close()
-        except Exception:
-            tb = traceback.format_exc()
-            parent = self.parent()
-            if parent is not None and hasattr(parent, "log_box"):
-                parent.log_box.insertPlainText(tb)
-                self.blink_timer = Blinker(parent.log_box, color_on="red", interval_ms=300, duration_ms=3000)
-                self.blink_timer.start()
-                # try:
-                #     self.scrollArea.ensureWidgetVisible(self.le_data_dest, xMargin=10, yMargin=10)
-                # except Exception:
-                #     tb2 = traceback.format_exc()
-                #     print(tb2)
-            else:
-                print(tb)
-
     def _apply_changes(self):
         # Test values
-        assert is_a_path(self.le_data_dest.text()) or self.le_data_dest.text() == 'default'
-        if self.cb_output_transformed.isChecked():
-            assert self.le_output_transformed.text().isnumeric() or int(self.le_output_transformed.text()) == -1
-        assert self.le_max_iter.text().isnumeric()
-        assert will_it_float(self.le_threshold.text())
-        if is_string_list(self.le_max_correspondance.text()):
-            max_corr = literal_eval(self.le_max_correspondance.text())
-            assert len(max_corr) > 0
-            for x in max_corr:
-                assert will_it_float(x)
-        else:
-            assert will_it_float(self.le_max_correspondance.text())
-        assert will_it_float(self.le_max_area.text())
-        assert will_it_float(self.le_ht_x.text())
-        assert will_it_float(self.le_ht_y.text())
-        assert will_it_float(self.le_ht_z.text())
-        assert self.le_field_x.text() != ""
-        assert self.le_field_y.text() != ""
-        assert self.le_field_z.text() != ""
-        assert self.le_field_classification.text() != ""
-        assert is_string_list(self.le_cat_to_rm.text())
-        for x in literal_eval(self.le_cat_to_rm.text()):
-            assert isinstance(x, int)
-        assert is_a_path(self.le_post_dest.text()) or self.le_post_dest.text() == 'default'
-        assert will_it_float(self.le_absurd_dist_local.text())
-        assert will_it_float(self.le_absurd_dist_local.text())
-
+        try:
+            assert test_value(self, is_a_path(self.le_data_dest.text()) or self.le_data_dest.text() == 'default', self.le_data_dest, self.scrollArea)
+            if self.cb_output_transformed.isChecked():
+                assert test_value(self, 
+                                  (self.le_output_transformed.text() == "-1" or self.le_output_transformed.text().isnumeric()),
+                                  self.le_output_transformed, self.scrollArea,
+                                  )
+            assert test_value(self, self.le_max_iter.text().isnumeric(), self.le_max_iter, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_threshold.text()), self.le_threshold, self.scrollArea)
+            if is_string_list(self.le_max_correspondance.text()):
+                max_corr = literal_eval(self.le_max_correspondance.text())
+                assert test_value(self, len(max_corr) > 0, self.le_max_correspondance, self.scrollArea)
+                for x in max_corr:
+                    assert test_value(self, will_it_float(x), self.le_max_correspondance, self.scrollArea)
+            else:
+                assert test_value(self, will_it_float(self.le_max_correspondance.text()), self.le_max_correspondance, self.scrollArea)
+            assert test_value(self, test_value(self, will_it_float(self.le_max_area.text()), self.le_max_area, self.scrollArea), self.le_max_area, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_ht_x.text()), self.le_ht_x, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_ht_y.text()), self.le_ht_y, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_ht_z.text()), self.le_ht_z, self.scrollArea)
+            assert test_value(self, self.le_field_x.text() != "", self.le_field_x, self.scrollArea)
+            assert test_value(self, self.le_field_y.text() != "", self.le_field_y, self.scrollArea)
+            assert test_value(self, self.le_field_z.text() != "", self.le_field_z, self.scrollArea)
+            assert test_value(self, self.le_field_classification.text() != "", self.le_field_classification, self.scrollArea)
+            assert test_value(self, is_string_list(self.le_cat_to_rm.text()), self.le_cat_to_rm, self.scrollArea)
+            for x in literal_eval(self.le_cat_to_rm.text()):
+                assert test_value(self, isinstance(x, int), self.le_cat_to_rm, self.scrollArea)
+            assert test_value(self, is_a_path(self.le_post_dest.text()) or self.le_post_dest.text() == 'default', self.le_post_dest, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_absurd_dist_local.text()), self.le_absurd_dist_local, self.scrollArea)
+            assert test_value(self, will_it_float(self.le_absurd_dist_local.text()), self.le_absurd_dist_local, self.scrollArea)
+        except Exception:
+            tb = traceback.format_exc()
+            print(tb)
+            return False
+        
         # Update conf
         # data
         OmegaConf.update(self.conf, 'data.src_res', self.le_data_dest.text())
@@ -171,6 +134,8 @@ class AdvancedOptions(QMainWindow):
         OmegaConf.update(self.conf, 'postprocessing.absurd_dist_local', float(self.le_absurd_dist_local.text()))
         OmegaConf.update(self.conf, 'postprocessing.absurd_dist_global', float(self.le_absurd_dist_global.text()))
 
+        self.close()
+    
     def _browse_folder(self, line_edit):
         path = QFileDialog.getExistingDirectory(
             self, "Select folder", ""

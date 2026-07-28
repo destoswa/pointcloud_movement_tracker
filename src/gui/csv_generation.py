@@ -1,15 +1,7 @@
-import sys
 import os
-import traceback
-from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QLabel, QLineEdit, QTextEdit, QPlainTextEdit
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, Qt, QTimer
-from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWidgets import QMainWindow, QFileDialog
 from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
-from tkinter import messagebox
-from ast import literal_eval
-import traceback as tb
-from pathvalidate import sanitize_filepath
 
 from src.production_utils import preprocess_into_csv
 from src.gui.utils import *
@@ -49,12 +41,12 @@ class CSVGen(QMainWindow):
 
     def _generate_csv(self):
         # Test values
-        assert is_a_path(self.le_epoch1.text()) and self.le_epoch1.text() != ""
-        assert is_a_path(self.le_epoch2.text()) and self.le_epoch2.text() != ""
-        assert is_a_path(self.le_res.text()) and self.le_res.text() != ""
-        assert is_a_path(self.le_csv_dest.text()) and self.le_csv_dest.text() != ""
-        assert self.le_filename.text() != ""
-        assert self.le_pattern.text() != ""
+        assert test_value(self, is_a_path(self.le_epoch1.text()) and self.le_epoch1.text() != "", self.le_epoch1)
+        assert test_value(self, is_a_path(self.le_epoch2.text()) and self.le_epoch2.text() != "", self.le_epoch2)
+        assert test_value(self, is_a_path(self.le_res.text()) and self.le_res.text() != "", self.le_res)
+        assert test_value(self, is_a_path(self.le_csv_dest.text()) and self.le_csv_dest.text() != "", self.le_csv_dest)
+        assert test_value(self, self.le_filename.text() != "", self.le_filename)
+        assert test_value(self, self.le_pattern.text() != "", self.le_pattern)
 
         # Update conf
         OmegaConf.update(self.conf, 'preprocessing.src_folder_old', self.le_epoch1.text())
@@ -81,4 +73,3 @@ class CSVGen(QMainWindow):
         )
         if path:
             line_edit.setText(path)
-

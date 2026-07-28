@@ -1,14 +1,8 @@
-import sys
 import os
 import traceback
-from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QLabel, QLineEdit, QTextEdit, QPlainTextEdit
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, Qt, QTimer
-from PyQt6.QtGui import QTextCursor
-from PyQt6.uic import loadUi
-from omegaconf import OmegaConf
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer
 from tkinter import messagebox
 from ast import literal_eval
-import traceback as tb
 from pathvalidate import sanitize_filepath
 
 
