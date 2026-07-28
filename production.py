@@ -4,6 +4,7 @@ from omegaconf import OmegaConf
 from process_one_tile import ICP_process
 from tqdm import tqdm
 from src.production_utils import preprocess_into_csv
+import traceback
 
 
 def production(conf, conf_one_tile, verbose):
@@ -23,11 +24,23 @@ def production(conf, conf_one_tile, verbose):
 
     df_tiles = pd.read_csv(conf.production.src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
-    for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles)):
-        conf_one_tile.data.src_pc1 = os.path.join(conf.production.src_folder_old, row.pc1)
-        conf_one_tile.data.src_pc2 = os.path.join(conf.production.src_folder_new, row.pc2)
-        conf_one_tile.data.src_res = row.src_res
-        ICP_process(conf_one_tile, verbose=verbose)
+    print("\nProducing on valid pairs of files:")
+    for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+        try:
+            conf_one_tile.data.src_pc1 = os.path.join(conf.preprocessing.src_folder_old, row.pc1)
+            conf_one_tile.data.src_pc2 = os.path.join(conf.preprocessing.src_folder_new, row.pc2)
+            conf_one_tile.data.src_res = row.res
+            ICP_process(conf_one_tile, verbose=verbose)
+        except Exception as e:
+            tb = traceback.format_exc()
+            # parent = self.parent()
+            print(tb)
+            # if parent is not None and hasattr(parent, "log_box"):
+            #     parent.log_box.insertPlainText(tb)
+            #     self.blink_timer = Blinker(parent.log_box, color_on="red", interval_ms=300, duration_ms=3000)
+            #     self.blink_timer.start()
+            # else:
+                # print(tb)
 
 
 if __name__ == "__main__":

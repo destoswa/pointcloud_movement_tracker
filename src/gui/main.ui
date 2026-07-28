@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>850</height>
+    <height>874</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,7 +39,7 @@
       <x>25</x>
       <y>640</y>
       <width>600</width>
-      <height>171</height>
+      <height>160</height>
      </rect>
     </property>
     <property name="readOnly">
@@ -947,6 +947,19 @@
     </widget>
     <zorder>fr_single</zorder>
     <zorder>fr_multiple</zorder>
+   </widget>
+   <widget class="QPushButton" name="btn_clear_logs">
+    <property name="geometry">
+     <rect>
+      <x>575</x>
+      <y>620</y>
+      <width>50</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>clear</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
