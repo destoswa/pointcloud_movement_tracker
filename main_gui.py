@@ -30,31 +30,37 @@ class mainUI(QMainWindow):
         self.btn_run_process.clicked.connect(self._run_algorithm)
         self.btn_epoch1.clicked.connect(lambda: self._browse(self.le_epoch1))
         self.btn_epoch2.clicked.connect(lambda: self._browse(self.le_epoch2))
+        self.btn_res_dest.clicked.connect(lambda: self._browse_folder(self.le_res_dest))
         self.btn_csv_file.clicked.connect(lambda: self._browse(self.le_csv_file, file_types="CSV files (*.csv)"))
         self.btn_advanced.clicked.connect(self._open_advanced_options_form)
         self.btn_generation_csv.clicked.connect(self._open_csv_gen_form)
         self.btn_clear_logs.clicked.connect(self._clear_logs)
 
         # top menus 
-        self.actionSingle.triggered.connect(self._selectSingle)
-        self.actionMultiple.triggered.connect(self._selectMultiple)
+        self.actionSingle.triggered.connect(lambda: self._select_mode('Single file', 'single', self.page_single))
+        self.actionMultiple.triggered.connect(lambda: self._select_mode('Multiple files', 'multiple', self.page_multiple))
+        self.actionPostprocessing.triggered.connect(lambda: self._select_mode('Postprocessing on existing quadtree', 'postprocessing', self.page_postprocessing))
+        # self.menu_advanced_options.triggered.connect(self._open_advanced_options_form)
 
         # others
         self.cb_split.clicked.connect(self._cb_split_clicked)
         self.cbb_icp_method.currentTextChanged.connect(self._change_icp_method)
-
 
         # --- Initial state of objects ---
         conf_single = OmegaConf.load('./config/one_tile.yaml')
         conf_multiple = OmegaConf.load('./config/production.yaml')
         self.conf = OmegaConf.merge(conf_single, conf_multiple)
 
-        self.fr_multiple.setVisible(False)
+        self._select_mode('Single file', 'single', self.page_single)
 
         # inputs
         self.le_epoch1.setText(str(self.conf.data.src_pc1))
         self.le_epoch2.setText(str(self.conf.data.src_pc2))
+        self.le_res_dest.setText(str(self.conf.data.src_res))
+        self.le_prefix.setText(str(self.conf.data.res_prefix))
         self.le_csv_file.setText(str(self.conf.production.src_csv))
+        self.le_post_prefix.setText(str(self.conf.data.res_prefix))
+        self.le_post_pickle.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'{self.conf.data.res_prefix}_pyramid_transforms.pickle'))
 
         # checkbox if split
         self.cb_split.setChecked(self.conf.categories.split_ground_anthropic)
@@ -114,17 +120,24 @@ class mainUI(QMainWindow):
         if path:
             line_edit.setText(path)
 
-    def _selectSingle(self):
-        self.fr_multiple.setVisible(False)
-        self.fr_single.setVisible(True)
-        self.lbl_mode.setText("Mode: Single")
-        self.mode = 'single'
+    def _browse_folder(self, line_edit):
+        path = QFileDialog.getExistingDirectory(
+            self, "Select folder", ""
+        )
+        if path:
+            line_edit.setText(path)    
 
-    def _selectMultiple(self):
-        self.fr_multiple.setVisible(True)
-        self.fr_single.setVisible(False)
-        self.lbl_mode.setText("Mode: Multiple")
-        self.mode = 'multiple'
+    def _select_mode(self, text, mode, page):
+        self.lbl_mode.setText(text)
+        self.mode = mode
+        self.stackedWidget.setCurrentWidget(page)
+
+        # Hide some options when postprocessing
+        if mode == 'postprocessing':
+            self.fr_options.setEnabled(False)
+            self.btn_advanced.setEnabled(True)
+        else:
+            self.fr_options.setEnabled(True)
 
     def _change_icp_method(self):
         if self.cbb_icp_method.currentText() == 'mix':
@@ -160,7 +173,6 @@ class mainUI(QMainWindow):
                 assert test_value(self, os.access(self.le_csv_file.text(), os.W_OK), self.le_csv_file)
             
             if self.cb_split.isChecked():
-                # assert will_it_float(self.le_ground_tile.text())
                 assert test_value(self, will_it_float(self.le_ground_tile.text()), self.le_ground_tile)
                 assert test_value(self, self.le_ground_points.text().isnumeric(), self.le_ground_points)
                 assert test_value(self, will_it_float(self.le_anthropic_tile.text()), self.le_anthropic_tile)
@@ -237,8 +249,8 @@ class mainUI(QMainWindow):
             else:
                 edit.setStyleSheet("")
 
-    def test(self):
-        print("test")
+    def test(self, msg='derp'):
+        print(f"test: {msg}")
 
 
 if __name__ == "__main__":

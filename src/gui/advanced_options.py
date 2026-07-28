@@ -17,15 +17,15 @@ class AdvancedOptions(QMainWindow):
         self.conf = parent.conf
 
         # --- Connections ---
-        self.btn_data_dest.clicked.connect(lambda: self._browse_folder(self.le_data_dest))
-        self.btn_post_dest.clicked.connect(lambda: self._browse_folder(self.le_post_dest))
+        # self.btn_data_dest.clicked.connect(lambda: self._browse_folder(self.le_data_dest))
+        # self.btn_post_dest.clicked.connect(lambda: self._browse_folder(self.le_post_dest))
         self.btn_apply.clicked.connect(self._apply_changes)
         self.btn_cancel.clicked.connect(self._cancel)
 
         # --- Initial state of objects ---
 
         # data
-        self.le_data_dest.setText(str(self.conf.data.src_res))
+        # self.le_data_dest.setText(str(self.conf.data.src_res))
         self.le_data_suffixe.setText(str(self.conf.data.res_suffixe))
         self.cb_output_transformed.setChecked(self.conf.args.do_output_transformed)
         self.le_output_transformed.setText(str(self.conf.args.output_level))
@@ -48,7 +48,7 @@ class AdvancedOptions(QMainWindow):
         self.le_cat_ground.setText(str(self.conf.categories.cat_ground))
 
         # post-processing:
-        self.le_post_dest.setText(str(self.conf.postprocessing.src_transforms))
+        # self.le_post_dest.setText(str(self.conf.postprocessing.src_transforms))
         self.le_absurd_dist_local.setText(str(self.conf.postprocessing.absurd_dist_local))
         self.le_absurd_dist_global.setText(str(self.conf.postprocessing.absurd_dist_global))
 
@@ -61,7 +61,7 @@ class AdvancedOptions(QMainWindow):
     def _apply_changes(self):
         # Test values
         try:
-            assert test_value(self, is_a_path(self.le_data_dest.text()) or self.le_data_dest.text() == 'default', self.le_data_dest, self.scrollArea)
+            # assert test_value(self, is_a_path(self.le_data_dest.text()) or self.le_data_dest.text() == 'default', self.le_data_dest, self.scrollArea)
             if self.cb_output_transformed.isChecked():
                 assert test_value(self, 
                                   (self.le_output_transformed.text() == "-1" or self.le_output_transformed.text().isnumeric()),
@@ -87,7 +87,7 @@ class AdvancedOptions(QMainWindow):
             assert test_value(self, is_string_list(self.le_cat_to_rm.text()), self.le_cat_to_rm, self.scrollArea)
             for x in literal_eval(self.le_cat_to_rm.text()):
                 assert test_value(self, isinstance(x, int), self.le_cat_to_rm, self.scrollArea)
-            assert test_value(self, is_a_path(self.le_post_dest.text()) or self.le_post_dest.text() == 'default', self.le_post_dest, self.scrollArea)
+            # assert test_value(self, is_a_path(self.le_post_dest.text()) or self.le_post_dest.text() == 'default', self.le_post_dest, self.scrollArea)
             assert test_value(self, will_it_float(self.le_absurd_dist_local.text()), self.le_absurd_dist_local, self.scrollArea)
             assert test_value(self, will_it_float(self.le_absurd_dist_local.text()), self.le_absurd_dist_local, self.scrollArea)
         except Exception:
@@ -97,7 +97,7 @@ class AdvancedOptions(QMainWindow):
         
         # Update conf
         # data
-        OmegaConf.update(self.conf, 'data.src_res', self.le_data_dest.text())
+        # OmegaConf.update(self.conf, 'data.src_res', self.le_data_dest.text())
         OmegaConf.update(self.conf, 'data.res_suffixe', self.le_data_suffixe.text())
         OmegaConf.update(self.conf, 'args.do_output_transformed', self.cb_output_transformed.isChecked())
         OmegaConf.update(self.conf, 'args.output_level', int(self.le_output_transformed.text()))
@@ -130,7 +130,7 @@ class AdvancedOptions(QMainWindow):
             OmegaConf.update(self.conf, 'categories.cat_ground', int(self.le_cat_ground.text()))
 
         # post-processing:
-        OmegaConf.update(self.conf, 'postprocessing.src_transforms', self.le_post_dest.text())
+        # OmegaConf.update(self.conf, 'postprocessing.src_transforms', self.le_post_dest.text())
         OmegaConf.update(self.conf, 'postprocessing.absurd_dist_local', float(self.le_absurd_dist_local.text()))
         OmegaConf.update(self.conf, 'postprocessing.absurd_dist_global', float(self.le_absurd_dist_global.text()))
 

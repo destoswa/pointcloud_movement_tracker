@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>556</width>
-    <height>631</height>
+    <height>899</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -43,8 +43,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>519</width>
-         <height>600</height>
+         <width>536</width>
+         <height>799</height>
         </rect>
        </property>
        <property name="minimumSize">
@@ -70,12 +70,12 @@
             <rect>
              <x>10</x>
              <y>0</y>
-             <width>31</width>
+             <width>181</width>
              <height>16</height>
             </rect>
            </property>
            <property name="text">
-            <string>Data :</string>
+            <string>Input data :</string>
            </property>
           </widget>
           <widget class="QLabel" name="label_9">
@@ -171,61 +171,6 @@
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
-          <widget class="QFrame" name="fr_data_dest">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>30</y>
-             <width>500</width>
-             <height>20</height>
-            </rect>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
-           </property>
-           <widget class="QLabel" name="label_12">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>70</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Destination : </string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btn_data_dest">
-            <property name="geometry">
-             <rect>
-              <x>80</x>
-              <y>0</y>
-              <width>70</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>select</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="le_data_dest">
-            <property name="geometry">
-             <rect>
-              <x>160</x>
-              <y>0</y>
-              <width>300</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>default</string>
-            </property>
-           </widget>
           </widget>
           <widget class="QFrame" name="fr_data_suffixe">
            <property name="geometry">
@@ -891,61 +836,6 @@
             <string>Post-processing :</string>
            </property>
           </widget>
-          <widget class="QFrame" name="fr_post_loc">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>460</y>
-             <width>500</width>
-             <height>20</height>
-            </rect>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
-           </property>
-           <widget class="QLabel" name="label_35">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>70</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Destination : </string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btn_post_dest">
-            <property name="geometry">
-             <rect>
-              <x>80</x>
-              <y>0</y>
-              <width>70</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>select</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="le_post_dest">
-            <property name="geometry">
-             <rect>
-              <x>160</x>
-              <y>0</y>
-              <width>300</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </widget>
           <widget class="QLabel" name="label_36">
            <property name="geometry">
             <rect>
@@ -964,7 +854,7 @@
             <rect>
              <x>40</x>
              <y>520</y>
-             <width>431</width>
+             <width>100</width>
              <height>20</height>
             </rect>
            </property>
@@ -992,7 +882,7 @@
              <rect>
               <x>45</x>
               <y>0</y>
-              <width>21</width>
+              <width>30</width>
               <height>20</height>
              </rect>
             </property>
@@ -1003,8 +893,8 @@
            <widget class="QLabel" name="label_39">
             <property name="geometry">
              <rect>
-              <x>70</x>
-              <y>0</y>
+              <x>80</x>
+              <y>2</y>
               <width>21</width>
               <height>20</height>
              </rect>
@@ -1017,9 +907,9 @@
           <widget class="QFrame" name="fr_absurd_dist_global">
            <property name="geometry">
             <rect>
-             <x>40</x>
-             <y>550</y>
-             <width>431</width>
+             <x>180</x>
+             <y>520</y>
+             <width>100</width>
              <height>20</height>
             </rect>
            </property>
@@ -1047,7 +937,7 @@
              <rect>
               <x>45</x>
               <y>0</y>
-              <width>21</width>
+              <width>30</width>
               <height>20</height>
              </rect>
             </property>
@@ -1058,8 +948,8 @@
            <widget class="QLabel" name="label_40">
             <property name="geometry">
              <rect>
-              <x>70</x>
-              <y>0</y>
+              <x>80</x>
+              <y>2</y>
               <width>21</width>
               <height>20</height>
              </rect>
