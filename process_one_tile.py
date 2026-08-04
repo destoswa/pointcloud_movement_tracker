@@ -64,12 +64,15 @@ def ICP_process(conf, verbose=True):
         os.makedirs(pointcloud_res, exist_ok=True)
 
     start = time()
-    src_result_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_pyramid_transforms.pickle')
+    src_result_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_quadtree_transforms.pickle')
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
     time0 = time()
+    list_anthropic = [conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic
+    list_ground = [conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground
+    list_cat_to_keep = [x for row in [list_anthropic, list_ground] for x in row]
     tiles_original = {
-        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], conf.categories.list_cat_to_remove),
-        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], conf.categories.list_cat_to_remove),
+        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
+        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
     }
     if verbose:
         print("time to load: ", time() - time0)
@@ -93,14 +96,14 @@ def ICP_process(conf, verbose=True):
     if conf.categories.split_ground_anthropic:
         # Process ground
         tiles_ground = {
-            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
-            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_ground, conf.args.field_names, 'keep'),
+            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_ground, conf.args.field_names),
+            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_ground, conf.args.field_names),
         }
 
         # Process anthropic
         tiles_anthropic = {
-            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
-            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_ground, conf.args.field_names, 'remove'),
+            'source': filter_las_by_classification(tiles_original['source'], conf.categories.cat_anthropic, conf.args.field_names),
+            'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_anthropic, conf.args.field_names),
         }
 
         roots = {
@@ -298,15 +301,19 @@ def ICP_process(conf, verbose=True):
             print("Starting postprocessing...")
 
         src_out_gpkg = os.path.join(os.path.dirname(src_result_transforms), 'points_translate.gpkg')
+        keep_full_tree = conf.postprocessing.to_keep.full_tree
+        keep_layers = conf.postprocessing.to_keep.layers
 
         # Postprocess with A0
         if conf.postprocessing.verbose:
             print("\nPostprocessing with initial alignment (w_A0)")
+
         postprocessing(
             root=roots['ground'], 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
+            keep_full_tree=keep_full_tree,
+            keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='w_A0', 
@@ -316,13 +323,16 @@ def ICP_process(conf, verbose=True):
         # Postprocess without A0:
         if conf.postprocessing.verbose:
             print("\nPostprocessing without initial alignment (wo_A0)")
+            
         A0_inv = np.linalg.inv(roots['ground'].global_transform)
         remove_A0(roots['ground'], A0_inv)
+
         postprocessing(
             root=roots['ground'], 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
+            keep_full_tree=keep_full_tree,
+            keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             suffixe='wo_A0', 

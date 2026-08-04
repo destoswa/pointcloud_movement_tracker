@@ -9,14 +9,17 @@ if __name__ != "__main__":
 import warnings
 
 
-def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_remove):
+def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, keep_all=False):
     ext = os.path.splitext(src_pc)[1].lower()
     if ext in ['.las', '.laz']:
         pc = laspy.read(src_pc)
-        mask = np.ones(len(pc), dtype=np.bool_)
         Classification = getattr(pc, cat_field)
-        for val in list_cat_to_remove:
-            mask[Classification == val] = False
+        if keep_all:
+            mask = np.ones(len(pc), dtype=np.bool)
+        else:
+            mask = np.zeros(len(pc), dtype=np.bool_)
+            for val in list_cat_to_keep:
+                mask[Classification == val] = True
         pc.points = pc.points[mask]
     else:
         raise ValueError(f"The pointcloud is not of type LAS or LAZ: {src_pc}")
@@ -316,7 +319,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
         run_icp_on_tree(child, pc_source, pc_target, src_res, args, time_subclouds_creation, time_icp, time_subclouds_saving,  pointtoplane_args, mode=mode)
 
 
-def filter_las_by_classification(las, classification_value, field_names, mode):
+def filter_las_by_classification(las, classification_value, field_names, mode="keep"):
     """Filter laspy object by classification and return an Open3D point cloud."""
     assert mode in ['keep', 'remove']
 

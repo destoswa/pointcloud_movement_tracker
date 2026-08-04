@@ -14,9 +14,10 @@ from src.postprocessing_utils import \
     remove_A0, find_node
 
 
-def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, absurd_dist_global=20, suffix='', verbose=False):
+# def postprocessing(root, src_out_gpkg, offset, keep_full_tree=True, keep_layers=True, absurd_dist_local=5, absurd_dist_global=20, suffixe='', verbose=False):
+def postprocessing(root, conf):
     # prepare paths
-    src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffix}.gpkg"
+    src_out_gpkg = f"{conf.data.res_prefix}_" + src_out_gpkg.split('.gpkg')[0] + ".gpkg"
     src_out_gpkg_leaves = src_out_gpkg.split('.gpkg')[0] + f"_leaves.gpkg"
     src_out_gpkg_layers_tiles = src_out_gpkg.split('.gpkg')[0] + f"_layers_tiles.gpkg"
     src_out_gpkg_layers_centers = src_out_gpkg.split('.gpkg')[0] + f"_layers_centers.gpkg"
@@ -30,31 +31,31 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
     compute_translation(root)
     compute_rotation(root)
     
-    if verbose:
+    if conf.postprocessing.verbose:
         print("Time to compute translation and rotation: ", time() - time0)
 
     # Detect absurd values
     original_len = len(root)
     time0 = time()
-    counter = detect_absurds(root, absurd_dist_local, absurd_dist_global)
+    counter = detect_absurds(root, conf.postprocessing.absurd_dist_local, conf.postprocessing.absurd_dist_global)
     
-    if verbose:
+    if conf.postprocessing.verbose:
         print("Time to detect absurds: ", time() - time0)
 
-    if verbose:
+    if conf.postprocessing.verbose:
         print(f"Number of absurd values: {counter} ({np.round(counter/original_len*100, 2)}%)")
 
     # Gather data for GPKG
     time0 = time()
     data, bbox_data = compute_data_for_gpkg(root, offset)
-    if verbose:
+    if conf.postprocessing.verbose:
         print("Time to compute data for gpkg: ", time() - time0)
 
     columns = node_to_list(root)[0]
 
     # Export all tiles
     time0 = time()
-    if to_keep.full_tree:
+    if keep_full_tree:
         export_points_and_bboxes(
             data=data,
             bbox_data=bbox_data,
@@ -62,7 +63,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
             output_path=src_out_gpkg,
             offset=offset,
             do_clip_overlaps=False,
-            verbose=verbose,
+            verbose=conf.postprocessing.verbose,
         )
 
     # Export only leaves
@@ -77,15 +78,15 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
         output_path=src_out_gpkg_leaves,
         offset=offset,
         do_clip_overlaps=True,
-        verbose=verbose,
+        verbose=conf.postprocessing.verbose,
     )
 
     # Layer by layer
-    if to_keep.layers:
-        if verbose:
+    if keep_layers:
+        if conf.postprocessing.verbose:
             print("Num of tiles per level:")
         for lvl in range(len(list_nodes_per_level)):
-            if verbose:
+            if conf.postprocessing.verbose:
                 print("\tlevel: ", lvl, ' - num subtiles: ', len(list_nodes_per_level[lvl]))
 
             data, bbox_data = compute_data_for_gpkg(list_nodes_per_level[lvl], offset)
@@ -98,7 +99,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
                 to_export='boxes',
                 offset=offset,
                 layer_name=f"Level {lvl}",
-                verbose=verbose,
+                verbose=conf.postprocessing.verbose,
             )
 
             export_points_and_bboxes(
@@ -109,10 +110,10 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
                 to_export='points',
                 offset=offset,
                 layer_name=f"Level {lvl}",
-                verbose=verbose,
+                verbose=conf.postprocessing.verbose,
             )
     
-    if verbose:
+    if conf.postprocessing.verbose:
         print("Time to export different version: ", time() - time0)
 
 if __name__ == "__main__":
@@ -132,35 +133,32 @@ if __name__ == "__main__":
         root = pickle.load(f)
     offset = np.loadtxt(src_offset, delimiter=',')
 
+    keep_full_tree = conf.postprocessing.to_keep.full_tree
+    keep_layers = conf.postprocessing.to_keep.layers
     # Postprocess with A0
     if conf.postprocessing.to_keep.initial_alignment in ['with', 'both']:
         print("Postprocessing with initial alignment (w_A0)")
-        postprocessing(
-            root=root, 
-            src_out_gpkg=src_out_gpkg, 
-            offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
-            absurd_dist_local=conf.postprocessing.absurd_dist_local,
-            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            suffix='w_A0', 
-            verbose=conf.postprocessing.verbose,
-            )
+        OmegaConf.update(conf, 'data.src_prefix', 'w_AO')
+        postprocessing(root, conf)
 
     # Postprocess without A0:
     if conf.postprocessing.to_keep.initial_alignment in ['without', 'both']:
         print("\nPostprocessing without initial alignment (wo_A0)")
         A0_inv = np.linalg.inv(root.global_transform)
         remove_A0(root, A0_inv)
-        postprocessing(
-            root=root, 
-            src_out_gpkg=src_out_gpkg, 
-            offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
-            absurd_dist_local=conf.postprocessing.absurd_dist_local,
-            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            suffix='wo_A0', 
-            verbose=conf.postprocessing.verbose,
-            )
+        OmegaConf.update(conf, 'data.src_prefix', 'wo_AO')
+        postprocessing(root, conf)
+        # postprocessing(
+        #     root=root, 
+        #     src_out_gpkg=src_out_gpkg, 
+        #     offset=offset, 
+        #     keep_full_tree=keep_full_tree,
+        #     keep_layers=keep_layers,
+        #     absurd_dist_local=conf.postprocessing.absurd_dist_local,
+        #     absurd_dist_global=conf.postprocessing.absurd_dist_global, 
+        #     suffixe='wo_A0', 
+        #     verbose=conf.postprocessing.verbose,
+        #     )
 
     print()
 

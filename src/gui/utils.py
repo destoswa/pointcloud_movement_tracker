@@ -1,9 +1,13 @@
 import os
+import numpy as np
+import pickle
 import traceback
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer
 from tkinter import messagebox
 from ast import literal_eval
 from pathvalidate import sanitize_filepath
+from postprocessing import postprocessing
+from src.postprocessing_utils import remove_A0
 
 
 # --------------------------------
@@ -47,6 +51,53 @@ def test_value(self, test_res, object, scrollArea=None) -> bool:
 
         return False
 
+
+def run_postprocessing(conf):
+    if conf.postprocessing.src_transforms == 'default':
+        if conf.data.src_res == 'default':
+            conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
+        src_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_quadtree_transforms.pickle')
+    else:
+        src_transforms = conf.postprocessing.src_transforms
+
+    # prepare paths
+    src_out_gpkg = os.path.join(os.path.dirname(src_transforms), 'points_translate.gpkg')
+    src_offset = os.path.join(os.path.dirname(src_transforms), 'offset.txt')
+
+    with open(src_transforms, 'rb') as f:
+        root = pickle.load(f)
+    offset = np.loadtxt(src_offset, delimiter=',')
+
+    # Postprocess with A0
+    if conf.postprocessing.to_keep.initial_alignment in ['with', 'both']:
+        print("Postprocessing with initial alignment (w_A0)")
+        postprocessing(
+            root=root, 
+            src_out_gpkg=src_out_gpkg, 
+            offset=offset, 
+            to_keep=conf.postprocessing.to_keep,
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
+            suffix='w_A0', 
+            verbose=conf.postprocessing.verbose,
+            )
+
+    # Postprocess without A0:
+    if conf.postprocessing.to_keep.initial_alignment in ['without', 'both']:
+        print("\nPostprocessing without initial alignment (wo_A0)")
+        A0_inv = np.linalg.inv(root.global_transform)
+        remove_A0(root, A0_inv)
+        postprocessing(
+            root=root, 
+            src_out_gpkg=src_out_gpkg, 
+            offset=offset, 
+            to_keep=conf.postprocessing.to_keep,
+            absurd_dist_local=conf.postprocessing.absurd_dist_local,
+            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
+            suffix='wo_A0', 
+            verbose=conf.postprocessing.verbose,
+            )
+     
     
 # --------------------------------
 # Stream redirector
@@ -123,6 +174,6 @@ class Blinker(QObject):
         self.state = False
         self._apply_style()  # ensure it ends in the "off" state
 
-
+   
 def notimplementedyet():
     messagebox.showwarning("Warning", "Not implemented yet!") 

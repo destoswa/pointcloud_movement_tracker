@@ -205,6 +205,19 @@
        <string>ICP method :</string>
       </property>
      </widget>
+     <widget class="QCheckBox" name="cb_no_cat">
+      <property name="geometry">
+       <rect>
+        <x>270</x>
+        <y>0</y>
+        <width>151</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>No category</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QFrame" name="fr_options_split">
      <property name="geometry">
@@ -599,32 +612,6 @@
        <string>Outputs :</string>
       </property>
      </widget>
-     <widget class="QCheckBox" name="cb_full_tree">
-      <property name="geometry">
-       <rect>
-        <x>390</x>
-        <y>40</y>
-        <width>74</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>full tree</string>
-      </property>
-     </widget>
-     <widget class="QCheckBox" name="cb_layers">
-      <property name="geometry">
-       <rect>
-        <x>390</x>
-        <y>10</y>
-        <width>74</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>layers</string>
-      </property>
-     </widget>
      <widget class="QComboBox" name="cbb_init_alignment">
       <property name="geometry">
        <rect>
@@ -661,19 +648,6 @@
       </property>
       <property name="text">
        <string>initial alignment : </string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_20">
-      <property name="geometry">
-       <rect>
-        <x>290</x>
-        <y>30</y>
-        <width>61</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>To keep: </string>
       </property>
      </widget>
     </widget>
@@ -781,7 +755,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="page_single">
      <property name="minimumSize">
@@ -974,7 +948,7 @@
             <widget class="QLineEdit" name="le_prefix">
              <property name="minimumSize">
               <size>
-               <width>100</width>
+               <width>200</width>
                <height>0</height>
               </size>
              </property>
@@ -1220,7 +1194,7 @@
            <rect>
             <x>70</x>
             <y>0</y>
-            <width>100</width>
+            <width>200</width>
             <height>21</height>
            </rect>
           </property>
@@ -1258,6 +1232,14 @@
     </property>
     <addaction name="actionDocumentation"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionAdvanced_options"/>
+    <addaction name="actionload_config"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menumode"/>
    <addaction name="menuMore"/>
   </widget>
@@ -1280,6 +1262,16 @@
   <action name="actionDocumentation">
    <property name="text">
     <string>Documentation</string>
+   </property>
+  </action>
+  <action name="actionAdvanced_options">
+   <property name="text">
+    <string>Advanced options</string>
+   </property>
+  </action>
+  <action name="actionload_config">
+   <property name="text">
+    <string>load config</string>
    </property>
   </action>
  </widget>

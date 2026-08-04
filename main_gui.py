@@ -24,6 +24,7 @@ class mainUI(QMainWindow):
 
         # --- Internal attributes ---
         self.mode = 'single'
+        self.install_exception_hook()
 
         # --- Connections ---
         # buttons
@@ -32,6 +33,7 @@ class mainUI(QMainWindow):
         self.btn_epoch2.clicked.connect(lambda: self._browse(self.le_epoch2))
         self.btn_res_dest.clicked.connect(lambda: self._browse_folder(self.le_res_dest))
         self.btn_csv_file.clicked.connect(lambda: self._browse(self.le_csv_file, file_types="CSV files (*.csv)"))
+        self.btn_post_pickle.clicked.connect(lambda: self._browse(self.le_post_pickle, file_types="Pickle files (*.pickle *.pkl)"))
         self.btn_advanced.clicked.connect(self._open_advanced_options_form)
         self.btn_generation_csv.clicked.connect(self._open_csv_gen_form)
         self.btn_clear_logs.clicked.connect(self._clear_logs)
@@ -45,8 +47,20 @@ class mainUI(QMainWindow):
         # others
         self.cb_split.clicked.connect(self._cb_split_clicked)
         self.cbb_icp_method.currentTextChanged.connect(self._change_icp_method)
+        self.cb_no_cat.clicked.connect(lambda: self.fr_options_split.setEnabled(not self.cb_no_cat.isChecked()))
+
+        # redirect stdout to log box
+        do_show_logs = True
+        if do_show_logs:
+            self.stream = Stream()
+            self.stream.text_written.connect(self._write_log)
+            sys.stdout = self.stream
+            sys.stderr = self.stream
 
         # --- Initial state of objects ---
+        self.update_form()
+
+    def update_form(self):
         conf_single = OmegaConf.load('./config/one_tile.yaml')
         conf_multiple = OmegaConf.load('./config/production.yaml')
         self.conf = OmegaConf.merge(conf_single, conf_multiple)
@@ -60,7 +74,7 @@ class mainUI(QMainWindow):
         self.le_prefix.setText(str(self.conf.data.res_prefix))
         self.le_csv_file.setText(str(self.conf.production.src_csv))
         self.le_post_prefix.setText(str(self.conf.data.res_prefix))
-        self.le_post_pickle.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'{self.conf.data.res_prefix}_pyramid_transforms.pickle'))
+        self.le_post_pickle.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'results/{self.conf.data.res_prefix}_quadtree_transforms.pickle'))
 
         # checkbox if split
         self.cb_split.setChecked(self.conf.categories.split_ground_anthropic)
@@ -81,20 +95,16 @@ class mainUI(QMainWindow):
         self.le_ground_points.setText(str(self.conf.categories.min_points_ground))
         self.le_anthropic_tile.setText(str(self.conf.categories.min_tile_size_anthropic))
         self.le_anthropic_points.setText(str(self.conf.categories.min_points_anthropic))
-        
+
+        # checkbox if no categories
+        self.cb_no_cat.setChecked(self.conf.categories.no_cat)
+        self.fr_options_split.setEnabled(not self.conf.categories.no_cat)
+
         # outputs
         init_alignment_id = ['both', 'with', 'without'].index(self.conf.postprocessing.to_keep.initial_alignment)
         self.cbb_init_alignment.setCurrentIndex(init_alignment_id)
-        self.cb_layers.setChecked(self.conf.postprocessing.to_keep.layers)
-        self.cb_full_tree.setChecked(self.conf.postprocessing.to_keep.full_tree)
-
-        # redirect stdout to log box
-        do_show_logs = True
-        if do_show_logs:
-            self.stream = Stream()
-            self.stream.text_written.connect(self._write_log)
-            sys.stdout = self.stream
-            sys.stderr = self.stream
+        # self.cb_layers.setChecked(self.conf.postprocessing.to_keep.layers)
+        # self.cb_full_tree.setChecked(self.conf.postprocessing.to_keep.full_tree)
 
     def _test_value(self, test_res, object, scrollArea=None) -> bool:
         if test_res:
@@ -112,20 +122,26 @@ class mainUI(QMainWindow):
         self.log_box.insertPlainText(text)
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
 
-    def _browse(self, line_edit, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
+    def _browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
         path, _ = QFileDialog.getOpenFileName(
             self, "Select file", "",
             filter=f"{file_types};;All files (*)"
         )
         if path:
-            line_edit.setText(path)
+            if hasattr(line_edit, 'setText'):
+                line_edit.setText(path)
+            else:
+                return path
 
     def _browse_folder(self, line_edit):
         path = QFileDialog.getExistingDirectory(
             self, "Select folder", ""
         )
         if path:
-            line_edit.setText(path)    
+            if hasattr(line_edit, 'setText'):
+                line_edit.setText(path)
+            else:
+                return path
 
     def _select_mode(self, text, mode, page):
         self.lbl_mode.setText(text)
@@ -138,6 +154,11 @@ class mainUI(QMainWindow):
             self.btn_advanced.setEnabled(True)
         else:
             self.fr_options.setEnabled(True)
+
+    def _load_config_file(self):
+        path = self._browse(file_types='YAML (*.yaml)')
+        if path != None:
+            self.conf = OmegaConf.load(path)
 
     def _change_icp_method(self):
         if self.cbb_icp_method.currentText() == 'mix':
@@ -200,15 +221,18 @@ class mainUI(QMainWindow):
             OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_global_tile.text()))
             OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
         OmegaConf.update(self.conf, 'postprocessing.to_keep.initial_alignment', self.cbb_init_alignment.currentText())
-        OmegaConf.update(self.conf, 'postprocessing.to_keep.layers', self.cb_layers.isChecked())
-        OmegaConf.update(self.conf, 'postprocessing.to_keep.full_tree', self.cb_full_tree.isChecked())
+        # OmegaConf.update(self.conf, 'postprocessing.to_keep.layers', self.cb_layers.isChecked())
+        # OmegaConf.update(self.conf, 'postprocessing.to_keep.full_tree', self.cb_full_tree.isChecked())
 
         self.btn_run_process.setEnabled(False)
         if self.mode == 'single':
             self.worker = WorkerThread(ICP_process, self.conf, self.conf.args.verbose)
-        else:
+        elif self.mode == 'multiple':
             OmegaConf.update(self.conf, 'preprocessing.do_preprocessing', False)
             self.worker = WorkerThread(production, self.conf, self.conf, True)
+        elif self.mode == 'postprocessing':
+            self.conf.postprocessing.src_transforms = self.le_post_pickle.text()
+            self.worker = WorkerThread(run_postprocessing, self.conf)
         self.worker.finished.connect(lambda: self.btn_run_process.setEnabled(True))
         self.worker.error_occurred.connect(self._on_worker_error)
         self.worker.start()
@@ -219,35 +243,28 @@ class mainUI(QMainWindow):
         print(traceback_str)
         print("="*50 + "\n")
 
+    def _cb_split_clicked(self):
+        self.fr_global_limits.setEnabled(not self.cb_split.isChecked())
+        self.fr_ground_limits.setEnabled(self.cb_split.isChecked())
+        self.fr_anthropic_limits.setEnabled(self.cb_split.isChecked())
+
+    def install_exception_hook(self):
+        def handle_exception(exc_type, exc_value, exc_tb):
+            tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+            print("\n" + "="*50)
+            print("UNHANDLED EXCEPTION:")
+            print(tb_str)
+            print("="*50 + "\n")
+            # optional: also show a message box
+            # QMessageBox.critical(self, "Unexpected Error", 
+            #                       f"An unexpected error occurred:\n\n{exc_value}\n\nSee log for full details.")
+
+        sys.excepthook = handle_exception
+
     def closeEvent(self, event):
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         super().closeEvent(event)
-
-    def _cb_split_clicked(self):
-        self._set_frame_disabled_look(self.fr_global_limits, self.cb_split.isChecked())
-        self._set_frame_disabled_look(self.fr_ground_limits, not self.cb_split.isChecked())
-        self._set_frame_disabled_look(self.fr_anthropic_limits, not self.cb_split.isChecked())
-
-    def _set_frame_disabled_look(self, frame, disabled: bool):
-        """
-        Recursively greys out QLabel and makes QLineEdit/QTextEdit/QPlainTextEdit
-        read-only with a grey background, to visually + functionally disable a section.
-        """
-        labels = frame.findChildren(QLabel)
-        text_edits = frame.findChildren((QLineEdit, QTextEdit, QPlainTextEdit))
-        for label in labels:
-            if disabled:
-                label.setStyleSheet("color: grey;")
-            else:
-                label.setStyleSheet("")  # reset to default/theme style
-
-        for edit in text_edits:
-            edit.setReadOnly(disabled)
-            if disabled:
-                edit.setStyleSheet("background-color: #e0e0e0; color: grey;")
-            else:
-                edit.setStyleSheet("")
 
     def test(self, msg='derp'):
         print(f"test: {msg}")
