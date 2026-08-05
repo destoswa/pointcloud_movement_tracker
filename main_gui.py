@@ -2,13 +2,15 @@ import sys
 import os
 import traceback
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QLabel, QLineEdit, QTextEdit, QPlainTextEdit
+from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
 
 from process_one_tile import ICP_process
 from production import production
-from src.gui.utils import *
+from src.gui.gui_utils import *
 from src.gui.csv_generation import CSVGen
 from src.gui.advanced_options import AdvancedOptions
 
@@ -29,11 +31,11 @@ class mainUI(QMainWindow):
         # --- Connections ---
         # buttons
         self.btn_run_process.clicked.connect(self._run_algorithm)
-        self.btn_epoch1.clicked.connect(lambda: self._browse(self.le_epoch1))
-        self.btn_epoch2.clicked.connect(lambda: self._browse(self.le_epoch2))
-        self.btn_res_dest.clicked.connect(lambda: self._browse_folder(self.le_res_dest))
-        self.btn_csv_file.clicked.connect(lambda: self._browse(self.le_csv_file, file_types="CSV files (*.csv)"))
-        self.btn_post_pickle.clicked.connect(lambda: self._browse(self.le_post_pickle, file_types="Pickle files (*.pickle *.pkl)"))
+        self.btn_epoch1.clicked.connect(lambda: browse(self, self.le_epoch1))
+        self.btn_epoch2.clicked.connect(lambda: browse(self, self.le_epoch2))
+        self.btn_res_dest.clicked.connect(lambda: browse_folder(self, self.le_res_dest))
+        self.btn_csv_file.clicked.connect(lambda: browse(self, self.le_csv_file, file_types="CSV files (*.csv)"))
+        self.btn_post_pickle.clicked.connect(lambda: browse(self, self.le_post_pickle, file_types="Pickle files (*.pickle *.pkl)"))
         self.btn_advanced.clicked.connect(self._open_advanced_options_form)
         self.btn_generation_csv.clicked.connect(self._open_csv_gen_form)
         self.btn_clear_logs.clicked.connect(self._clear_logs)
@@ -42,6 +44,7 @@ class mainUI(QMainWindow):
         self.actionSingle.triggered.connect(lambda: self._select_mode('Single file', 'single', self.page_single))
         self.actionMultiple.triggered.connect(lambda: self._select_mode('Multiple files', 'multiple', self.page_multiple))
         self.actionPostprocessing.triggered.connect(lambda: self._select_mode('Postprocessing on existing quadtree', 'postprocessing', self.page_postprocessing))
+        self.actionDocumentation.triggered.connect(self._open_documentation)
         # self.menu_advanced_options.triggered.connect(self._open_advanced_options_form)
 
         # others
@@ -122,26 +125,26 @@ class mainUI(QMainWindow):
         self.log_box.insertPlainText(text)
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
 
-    def _browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Select file", "",
-            filter=f"{file_types};;All files (*)"
-        )
-        if path:
-            if hasattr(line_edit, 'setText'):
-                line_edit.setText(path)
-            else:
-                return path
+    # def _browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
+    #     path, _ = QFileDialog.getOpenFileName(
+    #         self, "Select file", "src",
+    #         filter=f"{file_types};;All files (*)"
+    #     )
+    #     if path:
+    #         if hasattr(line_edit, 'setText'):
+    #             line_edit.setText(path)
+    #         else:
+    #             return path
 
-    def _browse_folder(self, line_edit):
-        path = QFileDialog.getExistingDirectory(
-            self, "Select folder", ""
-        )
-        if path:
-            if hasattr(line_edit, 'setText'):
-                line_edit.setText(path)
-            else:
-                return path
+    # def _browse_folder(self, line_edit):
+    #     path = QFileDialog.getExistingDirectory(
+    #         self, "Select folder", ""
+    #     )
+    #     if path:
+    #         if hasattr(line_edit, 'setText'):
+    #             line_edit.setText(path)
+    #         else:
+    #             return path
 
     def _select_mode(self, text, mode, page):
         self.lbl_mode.setText(text)
@@ -170,16 +173,24 @@ class mainUI(QMainWindow):
     
     def _open_csv_gen_form(self):
         csv_gen_form = CSVGen(self)
+        # Position relative to main window's top-left corner
         main_pos = self.pos()
         csv_gen_form.move(main_pos.x() - 300, main_pos.y() - 100)
         csv_gen_form.show()
 
     def _open_advanced_options_form(self):
         advanced_form = AdvancedOptions(self)
-        # Position relative to main window's top-left corner
+        # Position relative to main window's top-right corner
         main_pos = self.pos()
         advanced_form.move(main_pos.x() + 500, main_pos.y() - 100)
         advanced_form.show()
+
+    def _open_documentation(self):
+        doc_form = docUI(self)
+        # Position relative to main window's top-left corner
+        main_pos = self.pos()
+        doc_form.move(main_pos.x() + 500, main_pos.y() - 100)
+        doc_form.show()
 
     def _clear_logs(self):
         self.log_box.setText('')
@@ -268,6 +279,13 @@ class mainUI(QMainWindow):
 
     def test(self, msg='derp'):
         print(f"test: {msg}")
+
+
+class docUI(QMainWindow):
+    def __init__(self, parent=None):
+        super(docUI, self).__init__(parent)
+        loadUi("src/gui/documentation2.ui", self)
+        self.webView.load(QUrl.fromLocalFile(r"D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\src\gui\css-test-page.html"))
 
 
 if __name__ == "__main__":

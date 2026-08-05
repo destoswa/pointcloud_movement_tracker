@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS / HTML Interpreter Test Page</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --card-bg: #1a1e33;
+    --accent: #ff6b6b;
+    --accent2: #4ecdc4;
+    --accent3: #ffd93d;
+    --text: #eef0f7;
+    --muted: #9aa1b9;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0f1220 0%, #1b1035 50%, #0f1220 100%);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  header h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    margin: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(255, 107, 107, 0.25);
+  }
+
+  header p {
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(circle, rgba(255,255,255,0.06), transparent 60%);
+    transform: rotate(0deg);
+    animation: spin 12s linear infinite;
+    pointer-events: none;
+  }
+
+  .card:hover {
+    transform: translateY(-6px) scale(1.015);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  }
+
+  .card h2 {
+    margin-top: 0;
+    color: var(--accent3);
+    font-size: 1.4rem;
+    border-bottom: 2px dashed rgba(255, 217, 61, 0.3);
+    padding-bottom: 10px;
+  }
+
+  .card p {
+    color: var(--text);
+    font-size: 0.98rem;
+  }
+
+  .card p.muted { color: var(--muted); font-size: 0.9rem; }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* Ordered list with styled markers */
+  ol.styled-list {
+    counter-reset: item;
+    padding-left: 0;
+  }
+
+  ol.styled-list li {
+    list-style: none;
+    margin: 12px 0;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid var(--accent2);
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    font-style: italic;
+    counter-increment: item;
+  }
+
+  ol.styled-list li::before {
+    content: counter(item) ". ";
+    color: var(--accent2);
+    font-size: 1.15em;
+    margin-right: 6px;
+  }
+
+  /* Unordered list with custom markers */
+  ul.fancy-list li::marker {
+    content: "✦ ";
+    color: var(--accent);
+  }
+  ul.fancy-list li {
+    margin: 6px 0;
+  }
+
+  blockquote {
+    border-left: 4px solid var(--accent);
+    margin: 20px 0;
+    padding: 10px 20px;
+    background: rgba(255, 107, 107, 0.06);
+    font-style: italic;
+    color: var(--muted);
+    border-radius: 0 8px 8px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 0.92rem;
+  }
+
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  th {
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+  }
+
+  tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Courier New", monospace;
+    color: var(--accent2);
+  }
+
+  pre {
+    background: #0a0c18;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  button {
+    border: none;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: #1a0b0b;
+  }
+
+  button.secondary {
+    background: transparent;
+    border: 2px solid var(--accent2);
+    color: var(--accent2);
+  }
+
+  button:hover {
+    transform: scale(1.06);
+    opacity: 0.9;
+  }
+
+  .progress {
+    height: 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    width: 72%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent3));
+    border-radius: 999px;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  .badges span {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    margin: 4px 4px 0 0;
+    font-weight: bold;
+  }
+
+  .badge-a { background: rgba(255,107,107,0.18); color: var(--accent); }
+  .badge-b { background: rgba(78,205,196,0.18); color: var(--accent2); }
+  .badge-c { background: rgba(255,217,61,0.18); color: var(--accent3); }
+
+  footer {
+    text-align: center;
+    margin-top: 50px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.8rem; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Lorem Ipsum Interpreter Test</h1>
+  <p>A single-file sandbox for checking HTML &amp; CSS rendering</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Typography</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. <strong>Ut enim ad minim veniam</strong>, quis nostrud exercitation ullamco laboris.</p>
+    <p class="muted">Nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.</p>
+    <blockquote>"Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."</blockquote>
+  </div>
+
+  <div class="card">
+    <h2>Lists</h2>
+    <ol class="styled-list">
+      <li>Main form</li>
+      <li>Advanced Options</li>
+      <li>CSV generation</li>
+    </ol>
+    <ul class="fancy-list">
+      <li>Curabitur pretium tincidunt lacus</li>
+      <li>Nulla gravida orci a odio</li>
+      <li>Aenean sollicitudin, lorem quis bibendum</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Table</h2>
+    <table>
+      <thead>
+        <tr><th>Module</th><th>Status</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lorem Parser</td><td>Passing</td><td>96%</td></tr>
+        <tr><td>Ipsum Renderer</td><td>Passing</td><td>88%</td></tr>
+        <tr><td>Dolor Engine</td><td>Warning</td><td>61%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Buttons &amp; Progress</h2>
+    <p class="muted">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+    <div class="btn-row">
+      <button class="primary">Run Test</button>
+      <button class="secondary">Reset</button>
+    </div>
+    <div class="progress"><div class="progress-bar"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Code Block</h2>
+    <p class="muted">Inline code like <code>display: flex;</code> and full blocks:</p>
+    <pre><code>.example {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h2>Badges</h2>
+    <p class="muted">Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae.</p>
+    <div class="badges">
+      <span class="badge-a">Lorem</span>
+      <span class="badge-b">Ipsum</span>
+      <span class="badge-c">Dolor</span>
+    </div>
+  </div>
+
+  <div class="card full-width">
+    <h2>Long Form Text</h2>
+    <p>Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Donec ullamcorper nulla non metus auctor fringilla. Cras mattis consectetur purus sit amet fermentum. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+    <p>Aenean lacinia bibendum nulla sed consectetur. Etiam porta sem malesuada magna mollis euismod. Nullam id dolor id nibh ultricies vehicula ut id elit. Maecenas sed diam eget risus varius blandit sit amet non magna. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p>Generated test page &mdash; grid, flexbox, animations, gradients, custom markers, tables, and more.</p>
+</footer>
+
+</body>
+</html>

@@ -770,7 +770,7 @@
         <x>0</x>
         <y>-10</y>
         <width>630</width>
-        <height>141</height>
+        <height>160</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -894,7 +894,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Results : </string>
+              <string>Results *  : </string>
              </property>
             </widget>
            </item>
@@ -975,6 +975,30 @@
               </size>
              </property>
             </spacer>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_20">
+             <property name="text">
+              <string>* if &quot;default&quot;, will save at the root of PointCloud - Epoch 1</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>

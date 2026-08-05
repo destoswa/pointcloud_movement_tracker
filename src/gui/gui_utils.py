@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pickle
 import traceback
+from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer
 from tkinter import messagebox
 from ast import literal_eval
@@ -9,7 +10,7 @@ from pathvalidate import sanitize_filepath
 from postprocessing import postprocessing
 from src.postprocessing_utils import remove_A0
 
-
+    
 # --------------------------------
 # Utils
 # --------------------------------
@@ -38,6 +39,31 @@ def is_a_path(filePath: str) -> bool:
     if filePath == sanitize_filepath(filePath):
         return True
     return False
+
+
+def browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
+    src_of_search = os.path.dirname(line_edit.text()) if is_a_path(line_edit.text()) else ''
+    path, _ = QFileDialog.getOpenFileName(
+        self, "Select file", src_of_search,
+        filter=f"{file_types};;All files (*)"
+    )
+    if path:
+        if hasattr(line_edit, 'setText'):
+            line_edit.setText(path)
+        else:
+            return path
+
+
+def browse_folder(self, line_edit):
+    src_of_search = os.path.dirname(line_edit.text()) if is_a_path(line_edit.text()) else ''
+    path = QFileDialog.getExistingDirectory(
+        self, "Select folder", src_of_search
+    )
+    if path:
+        if hasattr(line_edit, 'setText'):
+            line_edit.setText(path)
+        else:
+            return path
 
 
 def test_value(self, test_res, object, scrollArea=None) -> bool:

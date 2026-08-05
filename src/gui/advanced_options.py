@@ -4,7 +4,7 @@ from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
 from ast import literal_eval
 
-from src.gui.utils import *
+from src.gui.gui_utils import *
 
 
 class AdvancedOptions(QMainWindow):
@@ -17,8 +17,6 @@ class AdvancedOptions(QMainWindow):
         self.conf = parent.conf
 
         # --- Connections ---
-        # self.btn_data_dest.clicked.connect(lambda: self._browse_folder(self.le_data_dest))
-        # self.btn_post_dest.clicked.connect(lambda: self._browse_folder(self.le_post_dest))
         self.btn_apply.clicked.connect(self._apply_changes)
         self.btn_cancel.clicked.connect(self._cancel)
 
@@ -152,10 +150,3 @@ class AdvancedOptions(QMainWindow):
         OmegaConf.update(self.conf, 'postprocessing.absurd_dist_global', float(self.le_absurd_dist_global.text()))
 
         self.close()
-    
-    def _browse_folder(self, line_edit):
-        path = QFileDialog.getExistingDirectory(
-            self, "Select folder", ""
-        )
-        if path:
-            line_edit.setText(path)

@@ -4,7 +4,7 @@ from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
 
 from src.production_utils import preprocess_into_csv
-from src.gui.utils import *
+from src.gui.gui_utils import *
 
 class CSVGen(QMainWindow):
     def __init__(self, parent=None):
@@ -17,10 +17,10 @@ class CSVGen(QMainWindow):
 
         # --- Connections ---
         self.btn_generate.clicked.connect(self._generate_csv)
-        self.btn_epoch1.clicked.connect(lambda: self._browse_folder(self.le_epoch1))
-        self.btn_epoch2.clicked.connect(lambda: self._browse_folder(self.le_epoch2))
-        self.btn_res.clicked.connect(lambda: self._browse_folder(self.le_res))
-        self.btn_csv_dest.clicked.connect(lambda: self._browse_folder(self.le_csv_dest))
+        self.btn_epoch1.clicked.connect(lambda: browse_folder(self, self.le_epoch1))
+        self.btn_epoch2.clicked.connect(lambda: browse_folder(self, self.le_epoch2))
+        self.btn_res.clicked.connect(lambda: browse_folder(self, self.le_res))
+        self.btn_csv_dest.clicked.connect(lambda: browse_folder(self, self.le_csv_dest))
 
         # # --- Initial state of objects ---
         self.le_epoch1.setText(str(self.conf.preprocessing.src_folder_old))
@@ -67,9 +67,9 @@ class CSVGen(QMainWindow):
 
         self.parent().le_csv_file.setText(self.conf.production.src_csv)
 
-    def _browse_folder(self, line_edit):
-        path = QFileDialog.getExistingDirectory(
-            self, "Select folder", ""
-        )
-        if path:
-            line_edit.setText(path)
+    # def _browse_folder(self, line_edit):
+    #     path = QFileDialog.getExistingDirectory(
+    #         self, "Select folder", ""
+    #     )
+    #     if path:
+    #         line_edit.setText(path)
