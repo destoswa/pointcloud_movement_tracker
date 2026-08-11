@@ -322,34 +322,34 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 def filter_las_by_classification(las, classification_value, field_names, mode="keep"):
     """Filter laspy object by classification and return an Open3D point cloud."""
     assert mode in ['keep', 'remove']
-
+    print(set(getattr(las, field_names[3])))
     if field_names[3] not in las.point_format.dimension_names:
-        mask = np.ones(len(las), dtype=np.bool)
+        mask = np.ones(len(las), dtype=bool)
     elif len(set(las.classification)) == 1:
-        mask = np.ones(len(las), dtype=np.bool)
+        mask = np.ones(len(las), dtype=bool)
     elif mode == 'keep':
-        if isinstance(classification_value, list):
-            mask = np.array([x in [classification_value] for x in getattr(las, field_names[3])])
-        else:
+        if isinstance(classification_value, int):
             mask = las.classification == classification_value
-    elif mode == 'remove':
-        # remove all elements of list
-        if isinstance(classification_value, list):
-            mask = np.array([x not in [classification_value] for x in getattr(las, field_names[3])])
         else:
-            mask =  getattr(las, field_names[3]) != classification_value
+            mask = np.isin(getattr(las, field_names[3]), classification_value)
+    elif mode == 'remove':
+        if isinstance(classification_value, int):
+            mask = getattr(las, field_names[3]) != classification_value
+        else:
+            mask = ~np.isin(getattr(las, field_names[3]), classification_value)
     else:
-        mask = np.ones(len(las), dtype=np.bool)
+        mask = np.ones(len(las), dtype=bool)
 
-    filtered_points = las.points[mask]
-    
+    # Apply mask to coordinates (use las.x/y/z directly — laspy handles scale/offset)
     pc = o3d.geometry.PointCloud()
     pc.points = o3d.utility.Vector3dVector(
-        np.stack([ getattr(las, field_names[0]) * las.header.scale[0] + las.header.offset[0],
-                   getattr(las, field_names[1]) * las.header.scale[1] + las.header.offset[1],
-                   getattr(las, field_names[2]) * las.header.scale[2] + las.header.offset[2]], axis=1)
+        np.stack([
+            las.x[mask],
+            las.y[mask],
+            las.z[mask]
+        ], axis=1)
     )
-    
+
     return pc
 
 

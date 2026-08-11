@@ -2,7 +2,10 @@ import os
 import re
 from pathlib import Path
 import csv
-import re
+import pandas as pd
+import geopandas as gpd
+from tqdm import tqdm
+from omegaconf import OmegaConf
 
 
 def template_to_regex(template):
@@ -132,11 +135,11 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
         writer = csv.writer(csvfile, delimiter=';')
         writer.writerow(['key', 'pc1', 'pc2', 'res', 'status'])
         for key, f1, f2 in matched:
-            writer.writerow([key, f1, f2, os.path.join(src_res, f'{key}_res'), 'matched'])
+            writer.writerow([key, os.path.join(src_folder_old, f1), os.path.join(src_folder_new, f2), os.path.join(src_res, f'{key}_res'), 'matched'])
         for key, f1 in unmatched1:
-            writer.writerow([key, f1, '', '', 'no_pc2'])
+            writer.writerow([key, os.path.join(src_folder_old, f1), '', '', 'no_pc2'])
         for key, f2 in unmatched2:
-            writer.writerow([key, '', f2, '', 'no_pc1'])
+            writer.writerow([key, '', os.path.join(src_folder_new, f2), '', 'no_pc1'])
 
     # --------------------------------
     # Summary
@@ -153,3 +156,65 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
             print("\nNo match in folder1:")
             for key, f in unmatched2:
                 print(f"  [{key}] {f}")
+
+
+def merge_gpkg(list_paths, layer_name, output_path, crs="EPSG:2056"):
+    """
+    Merge multiple GPKG files into one.
+    
+    Parameters:
+        list_paths: list of paths to GPKG files
+        layer_name: name of the layer to read from each GPKG
+        output_path: path to the output GPKG file
+        crs: coordinate reference system
+    """
+    gdfs = []
+    for path in list_paths:
+        try:
+            gdf = gpd.read_file(path)
+            gdfs.append(gdf)
+        except Exception as e:
+            print(f"Warning: could not read {path}: {e}")
+
+    merged = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True), crs=crs)
+    merged.to_file(output_path, layer=layer_name, driver="GPKG")
+    print(f"Merged {len(gdfs)} files → {len(merged)} features saved to {output_path}")
+    return merged
+
+
+def merge_results(src_csv, prefix=""):
+    df_tiles = pd.read_csv(src_csv, sep=';')
+    df_tiles = df_tiles.loc[df_tiles.status == 'matched']
+    print("\nProducing on valid pairs of files:")
+    # conf_one_tile.data.prefix = conf.production.prefix
+    res = []
+    src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
+    os.makedirs(src_res_merged, exist_ok=True)
+    for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+        # print([x for x in os.listdir(row.res) if 'leaves' in x])
+        res.append([os.path.join(row.res, x) for x in os.listdir(row.res) if 'leaves' in x])
+    df_res = pd.DataFrame(res)
+    # for col in df_res.itertuples():
+    #     print(col)
+    for _, series in df_res.items():
+        list_of_files = series.to_list()
+        # print(list_of_files)
+        # quit()
+        merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"
+        merge_gpkg(list_of_files, os.path.basename(merged_file_name), os.path.join(src_res_merged, merged_file_name), crs="EPSG:2056")
+    # print(df_res)
+
+
+if __name__ == "__main__":
+    verbose=False
+    conf_prod = OmegaConf.load('./config/production.yaml')
+    conf_one_tile = OmegaConf.load('./config/one_tile.yaml')
+
+    # Prepare csv
+    # production(conf_prod, conf_one_tile, verbose)
+
+    if conf_prod.production.do_merge_results:
+        merge_results(
+            src_csv=conf_prod.production.src_csv,
+            prefix=conf_prod.production.prefix,
+            )

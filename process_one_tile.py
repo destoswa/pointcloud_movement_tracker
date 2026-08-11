@@ -67,6 +67,8 @@ def ICP_process(conf, verbose=True):
     src_result_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_quadtree_transforms.pickle')
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
     time0 = time()
+
+    # load pointclouds
     list_anthropic = [conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic
     list_ground = [conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground
     list_cat_to_keep = [x for row in [list_anthropic, list_ground] for x in row]
@@ -92,6 +94,9 @@ def ICP_process(conf, verbose=True):
 
     time0 = time()
 
+    # set split to False if no_cat
+    conf.categories.split_ground_anthropic = bool(conf.categories.split_ground_anthropic * (conf.categories.no_cat==False))
+
     # Process categories
     if conf.categories.split_ground_anthropic:
         # Process ground
@@ -114,6 +119,9 @@ def ICP_process(conf, verbose=True):
         tiles_to_process = [tiles_ground, tiles_anthropic]
     else:
         pc_source = o3d.geometry.PointCloud()
+
+        # define if no removal of points at all or removal of the ones that are not in ground and anthropic (e.g. vegetation)
+        # if conf.categories.no_cat:
         pc_source.points = o3d.utility.Vector3dVector(
             np.stack([getattr(tiles_original['source'], conf.args.field_names[0]) * tiles_original['source'].header.scale[0] + tiles_original['source'].header.offset[0],
                     getattr(tiles_original['source'], conf.args.field_names[1]) * tiles_original['source'].header.scale[1] + tiles_original['source'].header.offset[1],
@@ -125,6 +133,13 @@ def ICP_process(conf, verbose=True):
                     getattr(tiles_original['target'], conf.args.field_names[1]) * tiles_original['target'].header.scale[1] + tiles_original['target'].header.offset[1],
                     getattr(tiles_original['target'], conf.args.field_names[2]) * tiles_original['target'].header.scale[2] + tiles_original['target'].header.offset[2]], axis=1)
         )
+        # else:
+        #     categories = [
+        #             *([conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground), 
+        #             *([conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic)
+        #             ]
+        #     pc_source = filter_las_by_classification(tiles_original['source'], categories, conf.args.field_names)
+        #     pc_target = filter_las_by_classification(tiles_original['target'], categories, conf.args.field_names)
         tiles_ground = {
             'source': pc_source,
             'target': pc_target,
@@ -228,6 +243,9 @@ def ICP_process(conf, verbose=True):
             }
         
         # run the ICP algorithm on every node of the tree
+        # print(f"Number of points of source: {len(tiles_original['source'].points)} to {len(tiles['source'].points)}")
+        # print(f"Number of points of target: {len(tiles_original['target'].points)} to  {len(tiles['target'].points)}")
+        # quit()
         lst_tiles_to_icp = get_nodes_of_level(roots[mode], lvl_to_process)
         if verbose:
             print(f"Processing ICP on {len(lst_tiles_to_icp)} tile{'s' if len(lst_tiles_to_icp) > 1 else ''} of level {lvl_to_process} and area {np.round(area / 4**lvl_to_process, 2)}km^2:")
@@ -300,7 +318,7 @@ def ICP_process(conf, verbose=True):
         if verbose:
             print("Starting postprocessing...")
 
-        src_out_gpkg = os.path.join(os.path.dirname(src_result_transforms), 'points_translate.gpkg')
+        src_out_gpkg = os.path.join(os.path.dirname(src_result_transforms), 'quadtree.gpkg')
         keep_full_tree = conf.postprocessing.to_keep.full_tree
         keep_layers = conf.postprocessing.to_keep.layers
 
@@ -316,7 +334,8 @@ def ICP_process(conf, verbose=True):
             keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            suffixe='w_A0', 
+            prefix=conf.data.res_prefix, 
+            suffix='w_A0', 
             verbose=conf.postprocessing.verbose,
             )
 
@@ -335,7 +354,8 @@ def ICP_process(conf, verbose=True):
             keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            suffixe='wo_A0', 
+            prefix=conf.data.res_prefix, 
+            suffix='wo_A0', 
             verbose=conf.postprocessing.verbose,
             )
         if conf.args.verbose:
@@ -360,4 +380,14 @@ def ICP_process(conf, verbose=True):
 if __name__ == "__main__":
     conf = OmegaConf.load("./config/one_tile.yaml")
     ICP_process(conf, conf.args.verbose)
-    
+    # A = 2
+    # B = [1, 3, 42]
+    # C = [*(A if isinstance(A, list) else [A]), *(B if isinstance(B, list) else [B])]
+    # print(C)
+    # categories = [
+    #     *([conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground), 
+    #     *([conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic)
+    #     ]
+    # print(conf.categories.cat_ground)
+    # print(conf.categories.cat_anthropic)
+    # print(categories)

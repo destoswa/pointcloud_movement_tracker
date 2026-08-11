@@ -304,7 +304,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>min tile size: </string>
+        <string>Min tile size: </string>
        </property>
       </widget>
       <widget class="QLabel" name="label_7">
@@ -317,7 +317,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>min num points: </string>
+        <string>Min num points: </string>
        </property>
       </widget>
       <widget class="QLineEdit" name="le_global_tile">
@@ -353,7 +353,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>global :</string>
+        <string>Global :</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_21">
@@ -407,7 +407,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>min tile size: </string>
+        <string>Min tile size: </string>
        </property>
       </widget>
       <widget class="QLabel" name="label_11">
@@ -420,7 +420,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>min num points: </string>
+        <string>Min num points: </string>
        </property>
       </widget>
       <widget class="QLineEdit" name="le_ground_tile">
@@ -456,7 +456,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>ground :</string>
+        <string>Ground :</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_23">
@@ -504,7 +504,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>min tile size: </string>
+        <string>Min tile size: </string>
        </property>
       </widget>
       <widget class="QLabel" name="label_13">
@@ -517,7 +517,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>min num points: </string>
+        <string>Min num points: </string>
        </property>
       </widget>
       <widget class="QLineEdit" name="le_anthropic_tile">
@@ -553,7 +553,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>anthropic :</string>
+        <string>Anthropic :</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_22">
@@ -647,7 +647,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>initial alignment : </string>
+       <string>Initial alignment : </string>
       </property>
      </widget>
     </widget>
@@ -755,7 +755,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="page_single">
      <property name="minimumSize">
@@ -1095,6 +1095,49 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_26">
+           <property name="text">
+            <string>Prefix : </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="le_multi_prefix">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
          <item>
           <widget class="QPushButton" name="btn_generation_csv">
@@ -1103,6 +1146,12 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>30</height>
+            </size>
            </property>
            <property name="text">
             <string>Auto-generation</string>

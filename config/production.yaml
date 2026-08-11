@@ -1,8 +1,9 @@
 production:
-  src_csv: data/production/files.csv   # path to CSV pairing file
-  do_merge_all_results: True
+  src_csv: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\files.csv   # path to CSV pairing fil
+  do_merge_results: True
+  prefix: test_multi
 preprocessing:
-  do_preprocessing: True                    # whether to run preprocessing to auto-pair old/new files
+  do_preprocessing: False                    # whether to run preprocessing to auto-pair old/new files
   src_folder_old: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\old   # path to folder containing the older point clouds
   src_folder_new: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\new   # path to folder containing the newer point clouds
   src_res: default

@@ -14,9 +14,11 @@ from src.postprocessing_utils import \
     remove_A0, find_node
 
 
-def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, absurd_dist_global=20, suffix='', verbose=False):
+def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absurd_dist_local=5, absurd_dist_global=20, suffix='', prefix='', verbose=False):
     # prepare paths
-    src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffix}.gpkg"
+    # src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffix}.gpkg"
+    src_out_gpkg = os.path.join(os.path.dirname(src_out_gpkg), f"{prefix}_" + os.path.basename(src_out_gpkg).split('.gpkg')[0] + f"_{suffix}.gpkg")
+    src_out_gpkg_full =  src_out_gpkg.split('.gpkg')[0] + f"_full_tree.gpkg"
     src_out_gpkg_leaves = src_out_gpkg.split('.gpkg')[0] + f"_leaves.gpkg"
     src_out_gpkg_layers_tiles = src_out_gpkg.split('.gpkg')[0] + f"_layers_tiles.gpkg"
     src_out_gpkg_layers_centers = src_out_gpkg.split('.gpkg')[0] + f"_layers_centers.gpkg"
@@ -54,12 +56,12 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
 
     # Export all tiles
     time0 = time()
-    if to_keep.full_tree:
+    if keep_full_tree:
         export_points_and_bboxes(
             data=data,
             bbox_data=bbox_data,
             columns=columns,
-            output_path=src_out_gpkg,
+            output_path=src_out_gpkg_full,
             offset=offset,
             do_clip_overlaps=False,
             verbose=verbose,
@@ -81,7 +83,7 @@ def postprocessing(root, src_out_gpkg, offset, to_keep, absurd_dist_local=5, abs
     )
 
     # Layer by layer
-    if to_keep.layers:
+    if keep_layers:
         if verbose:
             print("Num of tiles per level:")
         for lvl in range(len(list_nodes_per_level)):
@@ -139,9 +141,12 @@ if __name__ == "__main__":
             root=root, 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
+            keep_full_tree=conf.postprocessing.to_keep.full_tree,
+            keep_layers=conf.postprocessing.to_keep.layers,
+            # to_keep=conf.postprocessing.to_keep,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
-            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
+            absurd_dist_global=conf.postprocessing.absurd_dist_global,
+            prefix=conf.data.res_prefix, 
             suffix='w_A0', 
             verbose=conf.postprocessing.verbose,
             )
@@ -155,9 +160,11 @@ if __name__ == "__main__":
             root=root, 
             src_out_gpkg=src_out_gpkg, 
             offset=offset, 
-            to_keep=conf.postprocessing.to_keep,
+            keep_full_tree=conf.postprocessing.to_keep.full_tree,
+            keep_layers=conf.postprocessing.to_keep.layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
-            absurd_dist_global=conf.postprocessing.absurd_dist_global, 
+            absurd_dist_global=conf.postprocessing.absurd_dist_global,
+            prefix=conf.data.res_prefix,   
             suffix='wo_A0', 
             verbose=conf.postprocessing.verbose,
             )

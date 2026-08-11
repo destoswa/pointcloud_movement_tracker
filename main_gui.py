@@ -4,7 +4,7 @@ import traceback
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QLabel, QLineEdit, QTextEdit, QPlainTextEdit
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QTextCursor
-from PyQt6.QtWebEngineWidgets import QWebEngineView
+# from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
 
@@ -19,6 +19,9 @@ from src.gui.advanced_options import AdvancedOptions
 # Main UI
 # --------------------------------
 class mainUI(QMainWindow):
+    # def __init__(self):
+    #     super(mainUI, self).__init__()
+    #     loadUi("src/gui/main.ui", self)
     def __init__(self):
         super(mainUI, self).__init__()
         loadUi("src/gui/main.ui", self)
@@ -50,7 +53,7 @@ class mainUI(QMainWindow):
         # others
         self.cb_split.clicked.connect(self._cb_split_clicked)
         self.cbb_icp_method.currentTextChanged.connect(self._change_icp_method)
-        self.cb_no_cat.clicked.connect(lambda: self.fr_options_split.setEnabled(not self.cb_no_cat.isChecked()))
+        self.cb_no_cat.clicked.connect(self._cb_no_cat_clicked)
 
         # redirect stdout to log box
         do_show_logs = True
@@ -101,7 +104,8 @@ class mainUI(QMainWindow):
 
         # checkbox if no categories
         self.cb_no_cat.setChecked(self.conf.categories.no_cat)
-        self.fr_options_split.setEnabled(not self.conf.categories.no_cat)
+        self._cb_no_cat_clicked()
+        # self.fr_options_split.setEnabled(not self.conf.categories.no_cat)
 
         # outputs
         init_alignment_id = ['both', 'with', 'without'].index(self.conf.postprocessing.to_keep.initial_alignment)
@@ -167,9 +171,12 @@ class mainUI(QMainWindow):
         if self.cbb_icp_method.currentText() == 'mix':
             self.cb_split.setChecked(True)
             self.cb_split.setDisabled(True)
+            self.cb_no_cat.setChecked(False)
+            self.cb_no_cat.setDisabled(True)
             self._cb_split_clicked()
         else:
             self.cb_split.setDisabled(False)
+            self.cb_no_cat.setDisabled(False)
     
     def _open_csv_gen_form(self):
         csv_gen_form = CSVGen(self)
@@ -259,6 +266,16 @@ class mainUI(QMainWindow):
         self.fr_ground_limits.setEnabled(self.cb_split.isChecked())
         self.fr_anthropic_limits.setEnabled(self.cb_split.isChecked())
 
+    def _cb_no_cat_clicked(self):
+        if self.cb_no_cat.isChecked():
+            self.cb_split.setChecked(False)
+            self.cb_split.setEnabled(False)
+            self.fr_ground_limits.setEnabled(False)
+            self.fr_anthropic_limits.setEnabled(False)
+            self.fr_global_limits.setEnabled(True)
+        else:
+            self.cb_split.setEnabled(True)
+
     def install_exception_hook(self):
         def handle_exception(exc_type, exc_value, exc_tb):
             tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
@@ -282,10 +299,14 @@ class mainUI(QMainWindow):
 
 
 class docUI(QMainWindow):
+    # def __init__(self, parent=None):
+    #     super(docUI, self).__init__(parent)
+    #     loadUi("src/gui/documentation2.ui", self)
+    #     self.webView.load(QUrl.fromLocalFile(r"D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\src\gui\css-test-page.html"))
     def __init__(self, parent=None):
         super(docUI, self).__init__(parent)
-        loadUi("src/gui/documentation2.ui", self)
-        self.webView.load(QUrl.fromLocalFile(r"D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\src\gui\css-test-page.html"))
+        loadUi("src/gui/documentation.ui", self)
+        # self.webView.load(QUrl.fromLocalFile(r"D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\src\gui\css-test-page.html"))
 
 
 if __name__ == "__main__":

@@ -985,6 +985,32 @@
             <string>* can be a single number or a list</string>
            </property>
           </widget>
+          <widget class="QCheckBox" name="cb_merge_res">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>540</y>
+             <width>12</width>
+             <height>12</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_31">
+           <property name="geometry">
+            <rect>
+             <x>30</x>
+             <y>536</y>
+             <width>104</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Merge final results :</string>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>

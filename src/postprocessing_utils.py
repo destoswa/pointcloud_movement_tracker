@@ -262,6 +262,7 @@ def clip_overlaps(gdf, verbose=False):
     gdf = gdf.drop(columns=["area", "original_order"])
     return gdf
 
+
 def export_points_and_bboxes(data, columns, bbox_data, output_path, offset, do_clip_overlaps=False, to_export='both', layer_name='', crs="EPSG:2056", verbose=False):
 
     df_points = pd.DataFrame(data, columns=columns)

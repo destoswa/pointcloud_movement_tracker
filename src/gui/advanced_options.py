@@ -54,6 +54,7 @@ class AdvancedOptions(QMainWindow):
         # self.le_post_dest.setText(str(self.conf.postprocessing.src_transforms))
         self.le_absurd_dist_local.setText(str(self.conf.postprocessing.absurd_dist_local))
         self.le_absurd_dist_global.setText(str(self.conf.postprocessing.absurd_dist_global))
+        self.cb_merge_res.setChecked(self.conf.production.do_merge_results)
 
     def closeEvent(self, event):
         super().closeEvent(event)  # only accept/close if no error
