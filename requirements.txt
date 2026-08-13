@@ -1,5 +1,5 @@
 geopandas
-laspy
+laspy[laszip]
 numpy
 omegaconf
 open3d

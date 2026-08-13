@@ -32,7 +32,7 @@ def ICP_process(conf, verbose=True):
         try:
             assert os.path.exists(pc)
         except:
-            raise AttributeError(f"The path given for pc{id_pc} is wrong!") from None
+            raise AttributeError(f"The path given for pc{id_pc+1} is wrong!") from None
         
     # === PREPROCESSING ===
     pointcloud_formats = [os.path.splitext(x)[1][1:] for x in [conf.data.src_pc1, conf.data.src_pc2]]
@@ -84,8 +84,11 @@ def ICP_process(conf, verbose=True):
         os.remove(file_src)
 
     # Center pointclouds
+    x_mean = float(np.mean(tiles_original['source'].x))
+    y_mean = float(np.mean(tiles_original['source'].y))
     z_mean = float(np.mean(tiles_original['source'].z))
-    offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
+    # offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
+    offset = [x_mean, y_mean, z_mean]
 
     bbox_dict = {
         "min_bound": (tiles_original['source'].header.min - offset).tolist(),
