@@ -1,18 +1,18 @@
 data:
-  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\old\swisssurface3d_2018_2563_1145_2056_5728.las
-  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_28_csv_autofilling\new\swisssurface3d_2024_2563_1145_2056_5728.copc.laz
-  # src_pc1: D:\Terranum_SD\99_Data\Taiwan_point_cloud\Taroko_ToTo_2022.laz
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_32_taiwan\Taroko_ToTo_2015_sample.laz
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_32_taiwan\Taroko_ToTo_2025_1m_sample.laz
+  # src_pc1: D:\Terranum_SD\99_Data\Taiwan_point_cloud\Taroko_ToTo_2015.laz
   # src_pc2: D:\Terranum_SD\99_Data\Taiwan_point_cloud\Taroko_ToTo_2025_1m.laz
   # src_res: D:\Terranum_SD\99_Data\Taiwan_point_cloud\22-25
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
   # src_pc1: data/test/epoch1.laz # path to the first (older) point cloud
   # src_pc2: data/test/epoch2.laz # path to the second (newer) point cloud
-  src_res: default              # path to the output results folder
+  src_res: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_32_taiwan\results              # path to the output results folder
   res_prefix: test              # suffix appended to result filenames
   # input_formats: [ply, ply]     # file format of pc1 and pc2 respectively
 args:
-  method: pointtoplane          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
+  method: pointtopoint          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
   pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
   pointtoplane_max_nn: 50       # with "pointtoplane" method - max number of neighbors used for normal estimation
   max_iteration: 30             # max number of ICP iterations per tile
@@ -20,7 +20,7 @@ args:
   max_correspondence: 1.5       # max correspondence distance (m) for ICP point matching — single value or list per level
   # max_pointcloud_size: 2000     # the maximum size (m) of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
   max_area: 10                  # the maximum area (km^2) of the pointcloud to be process. Above, the pointcloud is divided into sub-pc that are processed separataly.
-  huge_translation: [2589500, 1169500, 0]   # global offset subtracted from coordinates for numerical stability (Swiss LV95)
+  huge_translation: [0, 0, 0]   # global offset subtracted from coordinates for numerical stability (Swiss LV95)
   field_names:  [X, Y, Z, classification]   # names of pointcloud fields coorresponding to cartesian positions and category field
   do_output_transformed: False  # whether to save transformed subclouds as PLY files for debugging
   output_level: -1              # level at which to save transformed subclouds (-1 = all levels)
@@ -32,7 +32,7 @@ categories:
   split_ground_anthropic: False # Whether to process separataly (True) or not (False) the ground and the anthropic
   cat_ground: 2                 # LAS classification code for ground points — single value or list
   cat_anthropic: [6, 17, 26, 27]  # LAS classification code for anthropic points — single value or list
-  min_tile_size_ground: 256     # minimum tile size (m) below which ground quadtree stops subdividing
+  min_tile_size_ground: 512     # minimum tile size (m) below which ground quadtree stops subdividing
   min_tile_size_anthropic: 128  # minimum tile size (m) below which anthropic quadtree stops subdividing
   min_points_ground: 2000      # minimum number of points in a tile to allow further subdivision (ground)
   min_points_anthropic: 50      # minimum number of points in a tile to allow further subdivision (anthropic)

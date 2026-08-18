@@ -9,6 +9,7 @@ from math import atan2, asin, acos, degrees
 
 def remove_A0(node, A0_inv):
     node.global_transform = np.linalg.matmul(node.global_transform, A0_inv)
+    # node.global_transform = np.linalg.matmul(node.global_transform, np.eye(4))
     for child in node.children:
         if child != None:
             remove_A0(child, A0_inv)
@@ -22,31 +23,45 @@ def compute_translation(node):
         # Compute translation:
         center = np.vstack([node.center.reshape((3,1)), np.array([1])])
         translated = np.linalg.matmul(node.global_transform, center)
-        diff = translated - center
-        norm = float(np.linalg.norm(diff))
-        norm2d = float(np.linalg.norm(diff[0:2]))
-        direction = ((translated[0:2] - center[0:2]) / norm2d).squeeze(-1) if norm2d > 0 else np.zeros((2,1))
-
+        translated_before_local = np.linalg.inv(node.local_transform) @ node.global_transform @ center
+        diff_before_local = translated_before_local - center
+        diff_global = translated - center
+        diff_local = diff_global - diff_before_local
+        norm = float(np.linalg.norm(diff_global))
+        norm2d = float(np.linalg.norm(diff_global[0:2]))
+        direction = ((diff_global[0:2]) / norm2d).squeeze(-1) if norm2d > 0 else np.zeros((2,1))
+        # direction = diff_global[0:2] / norm2d if norm2d > 0 else np.zeros((2,1))
+        norm_local = float(np.linalg.norm(diff_local))
+        norm2d_local = float(np.linalg.norm(diff_local[0:2]))
+        direction_local = ((diff_local[0:2]) / norm2d_local).squeeze(-1) if norm2d_local > 0 else np.zeros((2,1))
         node.metrics['pos_i'] = center[:3].squeeze(-1)
         node.metrics['pos_f'] = translated[:3].squeeze(-1)
         node.metrics['translation_x'] = direction[0]
         node.metrics['translation_y'] = direction[1]
-        node.metrics['dx'] = float(diff[0][0])
-        node.metrics['dy'] = float(diff[1][0])
-        node.metrics['dz'] = float(diff[2][0])
+        node.metrics['translation_x_local'] = direction_local[0]
+        node.metrics['translation_y_local'] = direction_local[1]
+        node.metrics['dx'] = float(diff_global[0][0])
+        node.metrics['dy'] = float(diff_global[1][0])
+        node.metrics['dz'] = float(diff_global[2][0])
         node.metrics['Disp2D'] = norm2d
         node.metrics['Disp3D'] = norm
-        node.metrics['movement_vector'] = diff[0:3]
+        node.metrics['Disp2D_local'] = norm2d_local
+        node.metrics['Disp3D_local'] = norm_local
+        node.metrics['movement_vector'] = diff_global[0:3]
     else:
         node.metrics['pos_i'] = None
         node.metrics['pos_f'] = None
         node.metrics['translation_x'] = 0
         node.metrics['translation_y'] = 0
+        node.metrics['translation_x_local'] = 0
+        node.metrics['translation_y_local'] = 0
         node.metrics['dx'] = 0
         node.metrics['dy'] = 0
         node.metrics['dz'] = 0
         node.metrics['Disp2D'] = 0
         node.metrics['Disp3D'] = 0
+        node.metrics['Disp2D_local'] = 0
+        node.metrics['Disp3D_local'] = 0
         node.metrics['movement_vector'] = None
 
     for child in node.children:
@@ -92,7 +107,7 @@ def compute_rotation(node):
         ToppleDir = (degrees(atan2(topple_x, topple_y)) + 360) % 360
 
         # Topple Angle
-        ToppleAngle = degrees(acos(R[2, 2]))
+        ToppleAngle = degrees(np.clip(acos(R[2, 2]), -1, 1))
 
         node.metrics['DispDir'] = DispDir
         node.metrics['DispPlunge'] = DispPlunge

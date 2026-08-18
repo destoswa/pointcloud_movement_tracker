@@ -196,7 +196,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>folder results:</string>
+      <string>Folder results:</string>
      </property>
     </widget>
     <widget class="QPushButton" name="btn_res">
@@ -251,7 +251,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>csv location:</string>
+      <string>CSV location:</string>
      </property>
     </widget>
     <widget class="QPushButton" name="btn_csv_dest">

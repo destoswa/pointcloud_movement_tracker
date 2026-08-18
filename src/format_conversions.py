@@ -444,7 +444,7 @@ class Convertions:
 
 
 def convert_one_file(src_file_in, src_file_out, in_type, out_type, **kwargs):
-    assert in_type in ['las', 'laz', 'txt', 'npz' 'ply', 'pcd']
+    assert in_type in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd']
     assert out_type in ['las', 'laz', 'txt', 'npz', 'ply']
     assert in_type != out_type
 

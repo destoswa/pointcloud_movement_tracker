@@ -113,7 +113,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
                 layer_name=f"Level {lvl}",
                 verbose=verbose,
             )
-    
+        
     if verbose:
         print("Time to export different version: ", time() - time0)
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         src_transforms = conf.postprocessing.src_transforms
 
     # prepare paths
-    src_out_gpkg = os.path.join(os.path.dirname(src_transforms), 'points_translate.gpkg')
+    src_out_gpkg = os.path.join(os.path.dirname(src_transforms), 'quadtree.gpkg')
     src_offset = os.path.join(os.path.dirname(src_transforms), 'offset.txt')
 
     with open(src_transforms, 'rb') as f:
