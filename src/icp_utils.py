@@ -228,7 +228,12 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     time_subclouds_creation.append(time() - time_sub_0)
 
     if len(pc_src.points) == 0 or len(pc_tgt.points) == 0:
+        # erase indices for storage
+        node.indices_src = None
+        node.indices_tgt = None
+        node.indices_tgt_neigh = None
         return
+    
     # save source and target tile if wanted:
     if args.do_output_transformed and args.output_level in [-1, node.level]:
         time_sub_0 = time()
