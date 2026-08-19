@@ -27,7 +27,6 @@ def production(conf, conf_one_tile):
     print("\nProducing on valid pairs of files:")
     conf_one_tile.data.prefix = conf.production.prefix
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
-        continue
         try:
             conf_one_tile.data.src_pc1 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc1)
             conf_one_tile.data.src_pc2 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc2)
