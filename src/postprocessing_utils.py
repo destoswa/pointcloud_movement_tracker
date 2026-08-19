@@ -107,7 +107,7 @@ def compute_rotation(node):
         ToppleDir = (degrees(atan2(topple_x, topple_y)) + 360) % 360
 
         # Topple Angle
-        ToppleAngle = degrees(np.clip(acos(R[2, 2]), -1, 1))
+        ToppleAngle = degrees(acos(np.clip(R[2, 2], -1, 1)))
 
         node.metrics['DispDir'] = DispDir
         node.metrics['DispPlunge'] = DispPlunge

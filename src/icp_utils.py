@@ -141,12 +141,19 @@ def build_quadtree(
         level, min_tile_size, min_points, max_area, is_anthropic=False
         ):
     """Recursively build quadtree based on point density."""
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', category=RuntimeWarning)
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter('ignore', category=RuntimeWarning)
     if isinstance(indices_src, np.ndarray):
-        center = np.mean(xyz_src[indices_src], axis=0)
+        if len(indices_src) == 0:
+            center = np.zeros(3)  # fallback for empty arrays
+        else:
+            center = np.mean(xyz_src[indices_src], axis=0)
     else:
-        center = np.mean(xyz_src, axis=0)
+        if len(xyz_src) == 0:
+            center = np.zeros(3)
+        else:
+            center = np.mean(xyz_src, axis=0)
+            
     node = QuadNode(bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, parent, is_anthropic)
     # node.planarity = compute_planarity(xyz_src[indices_src])
 

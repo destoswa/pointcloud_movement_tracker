@@ -158,7 +158,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
                 print(f"  [{key}] {f}")
 
 
-def merge_gpkg(list_paths, layer_name, output_path, crs="EPSG:2056"):
+def merge_gpkg(list_paths, output_path, crs="EPSG:2056"):
     """
     Merge multiple GPKG files into one.
     
@@ -168,43 +168,51 @@ def merge_gpkg(list_paths, layer_name, output_path, crs="EPSG:2056"):
         output_path: path to the output GPKG file
         crs: coordinate reference system
     """
-    gdfs = []
-    for path in list_paths:
-        try:
-            gdf = gpd.read_file(path)
-            gdfs.append(gdf)
-        except Exception as e:
-            print(f"Warning: could not read {path}: {e}")
+    # get all layers
+    layer_names = gpd.list_layers(list_paths[0])["name"].tolist()
+    print(layer_names)
+    for layer_name in layer_names:
+        gdfs = []
+        for path in list_paths:
+            try:
+                gdf = gpd.read_file(path, layer=layer_name)
+                gdfs.append(gdf)
+            except Exception as e:
+                print(f"Warning: could not read layer '{layer_name}' from {path}: {e}")
 
-    merged = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True), crs=crs)
-    merged.to_file(output_path, layer=layer_name, driver="GPKG")
-    print(f"Merged {len(gdfs)} files → {len(merged)} features saved to {output_path}")
-    return merged
+        if len(gdfs) == 0:
+            print(f"Warning: no data found for layer '{layer_name}'")
+            continue
+
+        merged = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True), crs=crs)
+        merged.to_file(output_path, layer=layer_name, driver="GPKG")
+        print(f"  Layer '{layer_name}': merged {len(gdfs)} files → {len(merged)} features")
+    # return merged
 
 
-def merge_results(src_csv, prefix=""):
+def merge_results(src_csv, crs="EPSG:2056"):
     df_tiles = pd.read_csv(src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
+
     print("\nProducing on valid pairs of files:")
-    # conf_one_tile.data.prefix = conf.production.prefix
     res = []
     src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
+
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
         src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
         os.makedirs(src_res, exist_ok=True)
-        # print([x for x in os.listdir(row.res) if 'leaves' in x])
         res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if 'leaves' in x])
+
     df_res = pd.DataFrame(res)
-    # for col in df_res.itertuples():
-    #     print(col)
+
     for _, series in df_res.items():
-        list_of_files = series.to_list()
-        # print(list_of_files)
-        # quit()
+        list_of_files = [f for f in series.to_list() if f]
+        if not list_of_files:
+            continue
         merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"
-        merge_gpkg(list_of_files, os.path.basename(merged_file_name), os.path.join(src_res_merged, merged_file_name), crs="EPSG:2056")
-    # print(df_res)
+        output_path = os.path.join(src_res_merged, merged_file_name)
+        merge_gpkg(list_of_files, output_path, crs=crs)
 
 
 if __name__ == "__main__":
