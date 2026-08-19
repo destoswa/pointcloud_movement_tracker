@@ -158,7 +158,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
                 print(f"  [{key}] {f}")
 
 
-def merge_gpkg(list_paths, output_path, crs="EPSG:2056"):
+def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
     """
     Merge multiple GPKG files into one.
     
@@ -170,7 +170,7 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056"):
     """
     # get all layers
     layer_names = gpd.list_layers(list_paths[0])["name"].tolist()
-    print(layer_names)
+
     for layer_name in layer_names:
         gdfs = []
         for path in list_paths:
@@ -186,39 +186,40 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056"):
 
         merged = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True), crs=crs)
         merged.to_file(output_path, layer=layer_name, driver="GPKG")
-        print(f"  Layer '{layer_name}': merged {len(gdfs)} files → {len(merged)} features")
-    # return merged
+        if verbose:
+            print(f"  Layer '{layer_name}': merged {len(gdfs)} files → {len(merged)} features")
 
 
-def merge_results(src_csv, crs="EPSG:2056"):
+def merge_results(src_csv, crs="EPSG:2056", verbose=False):
     df_tiles = pd.read_csv(src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
 
-    print("\nProducing on valid pairs of files:")
     res = []
     src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
 
-    for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+    # for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+    for row in df_tiles.iterrows():
         src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
         os.makedirs(src_res, exist_ok=True)
-        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if 'leaves' in x])
+        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
 
     df_res = pd.DataFrame(res)
 
-    for _, series in df_res.items():
+    print(f"Merging {len(series)} files:")
+    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res), desc="Merging"):
         list_of_files = [f for f in series.to_list() if f]
         if not list_of_files:
             continue
         merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"
         output_path = os.path.join(src_res_merged, merged_file_name)
-        merge_gpkg(list_of_files, output_path, crs=crs)
+        merge_gpkg(list_of_files, output_path, crs=crs, verbose=verbose)
 
 
 if __name__ == "__main__":
     verbose=False
     conf_prod = OmegaConf.load('./config/production.yaml')
-    conf_one_tile = OmegaConf.load('./config/one_tile.yaml')
+    conf_one_tile = OmegaConf.load('./config/one_file.yaml')
 
     # Prepare csv
     # production(conf_prod, conf_one_tile, verbose)

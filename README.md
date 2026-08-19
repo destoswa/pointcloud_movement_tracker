@@ -49,7 +49,7 @@ To access the necessary information, the script will try to read the following f
 - 'Z': position along the cartesian axis Z
 - 'category': attribute a type of landuse to each points. This field is used to remove the unnecessary layers (e.g. vegetation) and split the ground from the anthopic layers. \
 
-Those names are not hard-coded and can be changed in the config file `config\one_tile.yaml`.
+Those names are not hard-coded and can be changed in the config file `config\one_file.yaml`.
 
 
 ## How to use
@@ -58,7 +58,7 @@ Different scripts are available to process a single file, to rework the postproc
 All those tasks are driven through .yaml files in the folder `config`
 
 ### Single pointcloud
-To process a single file, you need to run the script `process_one_tile.py` at the root of the project. The corresponding config file is `config/one_tile.yaml` which contains all the parameters to drive the ICP processing and the postprocessing, which is done automatically after the main process.
+To process a single file, you need to run the script `process_one_tile.py` at the root of the project. The corresponding config file is `config/one_file.yaml` which contains all the parameters to drive the ICP processing and the postprocessing, which is done automatically after the main process.
 
 ### Multiple pointclouds (Production)
 The task at hand can be quite big (multiple hundreds or tousands of files). To automate the processing of them, the script `production.py` systematically calls the `process_one_tile.py` script.

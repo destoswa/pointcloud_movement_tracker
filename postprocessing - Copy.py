@@ -117,7 +117,7 @@ def postprocessing(root, conf):
         print("Time to export different version: ", time() - time0)
 
 if __name__ == "__main__":
-    conf = OmegaConf.load('./config/one_tile.yaml')
+    conf = OmegaConf.load('./config/one_file.yaml')
     if conf.postprocessing.src_transforms == 'default':
         if conf.data.src_res == 'default':
             conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')

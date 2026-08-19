@@ -8,7 +8,7 @@ from PyQt6.QtGui import QTextCursor
 from PyQt6.uic import loadUi
 from omegaconf import OmegaConf
 
-from process_one_tile import ICP_process
+from process_one_file import ICP_process
 from production import production
 from src.gui.gui_utils import *
 from src.gui.csv_generation import CSVGen
@@ -67,7 +67,7 @@ class mainUI(QMainWindow):
         self.update_form()
 
     def update_form(self):
-        conf_single = OmegaConf.load('./config/one_tile.yaml')
+        conf_single = OmegaConf.load('./config/one_file.yaml')
         conf_multiple = OmegaConf.load('./config/production.yaml')
         self.conf = OmegaConf.merge(conf_single, conf_multiple)
 

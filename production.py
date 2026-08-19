@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from omegaconf import OmegaConf
-from process_one_tile import ICP_process
+from process_one_file import ICP_process
 from tqdm import tqdm
 from src.production_utils import preprocess_into_csv, merge_results
 import traceback
@@ -24,6 +24,7 @@ def production(conf, conf_one_tile):
 
     df_tiles = pd.read_csv(conf.production.src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
+
     print("\nProducing on valid pairs of files:")
     conf_one_tile.data.prefix = conf.production.prefix
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
@@ -44,13 +45,8 @@ def production(conf, conf_one_tile):
 
 if __name__ == "__main__":
     conf_prod = OmegaConf.load('./config/production.yaml')
-    conf_one_tile = OmegaConf.load('./config/one_tile.yaml')
+    conf_one_tile = OmegaConf.load('./config/one_file.yaml')
 
     # Prepare csv
     production(conf_prod, conf_one_tile)
 
-    # if conf_prod.production.do_merge_results:
-    #     merge_results(
-    #         src_csv=conf_prod.production.src_csv,
-    #         prefix=conf_prod.production.prefix,
-    #         )

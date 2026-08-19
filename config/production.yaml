@@ -1,7 +1,7 @@
 production:
   src_csv: D:\Terranum_SD\99_Data\Taiwan_point_cloud\parts\list_files_sub_taiwan.csv   # path to CSV pairing fil
   do_merge_results: True
-  prefix: taiwan_15_22
+  prefix: taiwan
   verbose: True
 preprocessing:
   do_preprocessing: False                    # whether to run preprocessing to auto-pair old/new files

@@ -1,12 +1,12 @@
 import os
 from omegaconf import OmegaConf
 from copy import deepcopy
-from process_one_tile import ICP_process
+from process_one_file import ICP_process
 
 
 if __name__ == "__main__":
     # try:
-    conf = OmegaConf.load("./config/one_tile.yaml")
+    conf = OmegaConf.load("./config/one_file.yaml")
     list_configs = [
         # {   # 18-24 gicp
         #     "data.src_pc1": r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_4_real_movement_real_spacing\all_las_files\MNTB\swisssurface3d_2018_2588-1169_2056_5728.las",

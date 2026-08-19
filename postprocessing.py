@@ -14,7 +14,7 @@ from src.postprocessing_utils import \
     remove_A0, find_node
 
 
-def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absurd_dist_local=5, absurd_dist_global=20, suffix='', prefix='', verbose=False):
+def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absurd_dist_local=5, absurd_dist_global=20, suffix='', prefix='', crs="EPSG:2056", verbose=False):
     # prepare paths
     # src_out_gpkg = src_out_gpkg.split('.gpkg')[0] + f"_{suffix}.gpkg"
     src_out_gpkg = os.path.join(os.path.dirname(src_out_gpkg), f"{prefix}_" + os.path.basename(src_out_gpkg).split('.gpkg')[0] + f"_{suffix}.gpkg")
@@ -64,6 +64,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
             output_path=src_out_gpkg_full,
             offset=offset,
             do_clip_overlaps=False,
+            crs=crs,
             verbose=verbose,
         )
 
@@ -79,6 +80,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
         output_path=src_out_gpkg_leaves,
         offset=offset,
         do_clip_overlaps=True,
+            crs=crs,
         verbose=verbose,
     )
 
@@ -100,6 +102,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
                 to_export='boxes',
                 offset=offset,
                 layer_name=f"Level {lvl}",
+                crs=crs,
                 verbose=verbose,
             )
 
@@ -111,6 +114,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
                 to_export='points',
                 offset=offset,
                 layer_name=f"Level {lvl}",
+                crs=crs,
                 verbose=verbose,
             )
         
@@ -118,7 +122,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
         print("Time to export different version: ", time() - time0)
 
 if __name__ == "__main__":
-    conf = OmegaConf.load('./config/one_tile.yaml')
+    conf = OmegaConf.load('./config/one_file.yaml')
     if conf.postprocessing.src_transforms == 'default':
         if conf.data.src_res == 'default':
             conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
@@ -148,6 +152,7 @@ if __name__ == "__main__":
             absurd_dist_global=conf.postprocessing.absurd_dist_global,
             prefix=conf.data.res_prefix, 
             suffix='w_A0', 
+            crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
             )
 
@@ -166,6 +171,7 @@ if __name__ == "__main__":
             absurd_dist_global=conf.postprocessing.absurd_dist_global,
             prefix=conf.data.res_prefix,   
             suffix='wo_A0', 
+            crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
             )
 

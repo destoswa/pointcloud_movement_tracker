@@ -339,6 +339,7 @@ def ICP_process(conf, verbose=True):
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             prefix=conf.data.res_prefix, 
             suffix='w_A0', 
+            crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
             )
 
@@ -359,6 +360,7 @@ def ICP_process(conf, verbose=True):
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
             prefix=conf.data.res_prefix, 
             suffix='wo_A0', 
+            crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
             )
         if conf.args.verbose:
@@ -367,7 +369,7 @@ def ICP_process(conf, verbose=True):
 
     # save config
     shutil.copyfile(
-        './config/one_tile.yaml',
+        './config/one_file.yaml',
         os.path.join(conf.data.src_res, 'config.yaml')
     )
 
@@ -379,18 +381,24 @@ def ICP_process(conf, verbose=True):
         sec = int(delta_time_loop - 3600 * hours - 60 * min)
         print(f"\n==== COMPLETE PROCESS DONE IN {hours}:{min}:{sec} ====\n")
 
+def one_file(conf, verbose):
+    if conf.data.do_tiling:
+        print("Tiling at kilometric scale")
+
+        # load files
+
+        # find intersect of bboxes
+
+        # create all sublaz files in temp folder
+
+        # run ICP_process on all files
+
+        # merge results
+
+        
+    else:
+        ICP_process(conf, verbose)
 
 if __name__ == "__main__":
-    conf = OmegaConf.load("./config/one_tile.yaml")
-    ICP_process(conf, conf.args.verbose)
-    # A = 2
-    # B = [1, 3, 42]
-    # C = [*(A if isinstance(A, list) else [A]), *(B if isinstance(B, list) else [B])]
-    # print(C)
-    # categories = [
-    #     *([conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground), 
-    #     *([conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic)
-    #     ]
-    # print(conf.categories.cat_ground)
-    # print(conf.categories.cat_anthropic)
-    # print(categories)
+    conf = OmegaConf.load("./config/one_file.yaml")
+    one_file(conf, conf.args.verbose)
