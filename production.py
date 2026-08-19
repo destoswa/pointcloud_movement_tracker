@@ -7,7 +7,7 @@ from src.production_utils import preprocess_into_csv, merge_results
 import traceback
 
 
-def production(conf, conf_one_tile, verbose):
+def production(conf, conf_one_tile):
     if conf.production.src_csv == 'default':
         conf.production.src_csv = os.path.join(os.path.dirname(conf.production.src_folder_old), 'list_tiles.csv')
 
@@ -28,10 +28,10 @@ def production(conf, conf_one_tile, verbose):
     conf_one_tile.data.prefix = conf.production.prefix
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
         try:
-            conf_one_tile.data.src_pc1 = row.pc1
-            conf_one_tile.data.src_pc2 = row.pc2
-            conf_one_tile.data.src_res = row.res
-            ICP_process(conf_one_tile, verbose=verbose)
+            conf_one_tile.data.src_pc1 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc1)
+            conf_one_tile.data.src_pc2 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc2)
+            conf_one_tile.data.src_res = os.path.join(os.path.dirname(conf.production.src_csv), row.src_res)
+            ICP_process(conf_one_tile, verbose=conf.production.verbose)
         except Exception as e:
             tb = traceback.format_exc()
             print(tb)
@@ -44,12 +44,11 @@ def production(conf, conf_one_tile, verbose):
             
 
 if __name__ == "__main__":
-    verbose=False
     conf_prod = OmegaConf.load('./config/production.yaml')
     conf_one_tile = OmegaConf.load('./config/one_tile.yaml')
 
     # Prepare csv
-    production(conf_prod, conf_one_tile, verbose)
+    production(conf_prod, conf_one_tile)
 
     # if conf_prod.production.do_merge_results:
     #     merge_results(

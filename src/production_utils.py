@@ -191,8 +191,10 @@ def merge_results(src_csv, prefix=""):
     src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
     for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+        src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
+        os.makedirs(src_res, exist_ok=True)
         # print([x for x in os.listdir(row.res) if 'leaves' in x])
-        res.append([os.path.join(row.res, x) for x in os.listdir(row.res) if 'leaves' in x])
+        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if 'leaves' in x])
     df_res = pd.DataFrame(res)
     # for col in df_res.itertuples():
     #     print(col)
