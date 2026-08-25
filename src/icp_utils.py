@@ -13,13 +13,13 @@ def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, keep_all=False
     ext = os.path.splitext(src_pc)[1].lower()
     if ext in ['.las', '.laz']:
         pc = laspy.read(src_pc)
-        Classification = getattr(pc, cat_field)
         if keep_all:
             mask = np.ones(len(pc), dtype=np.bool)
         else:
+            classification = getattr(pc, cat_field)
             mask = np.zeros(len(pc), dtype=np.bool_)
             for val in list_cat_to_keep:
-                mask[Classification == val] = True
+                mask[classification == val] = True
         pc.points = pc.points[mask]
     else:
         raise ValueError(f"The pointcloud is not of type LAS or LAZ: {src_pc}")

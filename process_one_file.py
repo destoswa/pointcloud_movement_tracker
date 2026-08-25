@@ -2,6 +2,7 @@ import os
 import shutil
 import numpy as np
 import open3d as o3d
+from itertools import product
 from time import time
 import pickle
 from omegaconf import OmegaConf
@@ -16,9 +17,10 @@ from src.icp_utils import \
     trim_branch, \
     get_nodes_of_level
 from src.format_conversions import convert_one_file
+from src.production_utils import merge_results_v2
 
 
-def ICP_process(conf, verbose=True):
+def ICP_process(conf, bbox_offset=None, verbose=True):
     if conf.data.src_res == "default":
         conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
     o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
@@ -83,17 +85,24 @@ def ICP_process(conf, verbose=True):
     for file_src in files_to_remove:
         os.remove(file_src)
 
-    # Center pointclouds
-    x_mean = float(np.mean(tiles_original['source'].x))
-    y_mean = float(np.mean(tiles_original['source'].y))
-    z_mean = float(np.mean(tiles_original['source'].z))
-    # offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
-    offset = [x_mean, y_mean, z_mean]
 
-    bbox_dict = {
-        "min_bound": (tiles_original['source'].header.min - offset).tolist(),
-        "max_bound": (tiles_original['source'].header.max - offset).tolist()
-    }
+    if bbox_offset == None:
+        # Center pointclouds
+        x_mean = float(np.mean(tiles_original['source'].x))
+        y_mean = float(np.mean(tiles_original['source'].y))
+        z_mean = float(np.mean(tiles_original['source'].z))
+        # offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
+        offset = [x_mean, y_mean, z_mean]
+
+        bbox_dict = {
+            "min_bound": (tiles_original['source'].header.min - offset).tolist(),
+            "max_bound": (tiles_original['source'].header.max - offset).tolist()
+        }
+    else:
+        bbox_dict = bbox_offset[0]
+        offset = bbox_offset[1]
+        bbox_dict['min_bound'] = [x - y for x,y in zip(bbox_dict['min_bound'], offset)]
+        bbox_dict['max_bound'] = [x - y for x,y in zip(bbox_dict['max_bound'], offset)]
 
     time0 = time()
 
@@ -298,6 +307,10 @@ def ICP_process(conf, verbose=True):
                 child.parent = ground_node
                 ground_node.is_leaf = True 
 
+    # do not postprocess if not quadtree
+    if len(roots['ground']) == 0:
+        return -1
+
     # save final root
     with open(src_result_transforms, 'wb') as f:
         pickle.dump(roots['ground'], f)
@@ -326,7 +339,7 @@ def ICP_process(conf, verbose=True):
         keep_layers = conf.postprocessing.to_keep.layers
 
         # Postprocess with A0
-        if conf.postprocessing.verbose:
+        if verbose:
             print("\nPostprocessing with initial alignment (w_A0)")
 
         postprocessing(
@@ -344,7 +357,7 @@ def ICP_process(conf, verbose=True):
             )
 
         # Postprocess without A0:
-        if conf.postprocessing.verbose:
+        if verbose:
             print("\nPostprocessing without initial alignment (wo_A0)")
             
         A0_inv = np.linalg.inv(roots['ground'].global_transform)
@@ -365,7 +378,6 @@ def ICP_process(conf, verbose=True):
             )
         if conf.args.verbose:
             print(f"Postprocessing executed in {int(time() - time_postprocess)}s")
-        print()
 
     # save config
     shutil.copyfile(
@@ -381,24 +393,164 @@ def ICP_process(conf, verbose=True):
         sec = int(delta_time_loop - 3600 * hours - 60 * min)
         print(f"\n==== COMPLETE PROCESS DONE IN {hours}:{min}:{sec} ====\n")
 
+    return 0
+
+
 def one_file(conf, verbose):
     if conf.data.do_tiling:
         print("Tiling at kilometric scale")
 
         # load files
+        if conf.data.src_res == "default":
+            src_final_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
+        else:
+            src_final_res = conf.data.src_res
+        o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
 
+        # test if files exist
+        for id_pc, pc in enumerate([conf.data.src_pc1, conf.data.src_pc2]):
+            try:
+                assert os.path.exists(pc)
+            except:
+                raise AttributeError(f"The path given for pc{id_pc+1} is wrong!") from None
+            
+        # === PREPROCESSING ===
+        pointcloud_formats = [os.path.splitext(x)[1][1:] for x in [conf.data.src_pc1, conf.data.src_pc2]]
+        files_to_remove = []
+        if not all([x.lower() in ['las', 'laz'] for x in pointcloud_formats]):
+            for pc_key, format in zip(['data.src_pc1', 'data.src_pc2'], pointcloud_formats):
+                if format not in ['las', 'laz']:
+                    src_file_original = OmegaConf.select(conf, pc_key)
+                    if verbose:
+                        print(f"Converting following file into LAZ: {src_file_original}")
+                    src_file_out = os.path.splitext(src_file_original)[0] + '.laz'
+
+                    convert_one_file(
+                        src_file_in=src_file_original,
+                        src_file_out=src_file_out,
+                        in_type=format,
+                        out_type='laz'
+                    )
+
+                    OmegaConf.update(conf, pc_key, src_file_out)
+
+                    files_to_remove.append(src_file_out)
+        big_tiles = {
+                'source': read_pc_with_cat_timming(conf.data.src_pc1, "", [], True),
+                'target': read_pc_with_cat_timming(conf.data.src_pc2, "", [], True),
+            }
+        
         # find intersect of bboxes
+        bboxes = {
+            item: {
+                "min_bound": (x.header.min).tolist(),
+                "max_bound": (x.header.max).tolist(),
+                } for item, x in big_tiles.items()
+                }
+        bbox_intersect = {
+            "min_bound": [max(y[i] for y in [x['min_bound'] for x in bboxes.values()]) for i in range(3)],
+            "max_bound": [min(y[i] for y in [x['max_bound'] for x in bboxes.values()]) for i in range(3)],
+        }
+
+        bbox_rounded = {
+            "min_bound": [int(x // 1000 * 1000) if id_x < 2 else x for id_x, x in enumerate(bbox_intersect['min_bound'])],
+            "max_bound": [int((x // 1000 + 1) * 1000) if id_x < 2 else x for id_x, x in enumerate(bbox_intersect['max_bound'])],
+        }
+
+        # (create grid)
 
         # create all sublaz files in temp folder
+        src_temp_folder = os.path.join(os.path.dirname(src_final_res), "temp_subtiles")
+        src_temp_res = os.path.join(src_temp_folder, 'results')
+        os.makedirs(src_temp_folder, exist_ok=True)
+        os.makedirs(src_temp_res, exist_ok=True)
+
+        range_x = (bbox_rounded['max_bound'][0] - bbox_rounded['min_bound'][0]) // 1000
+        range_y = (bbox_rounded['max_bound'][1] - bbox_rounded['min_bound'][1]) // 1000
+
+        list_ranges = list(product(range(range_x), range(range_y)))
+
+        print("Creating tiles:")
+        # # ========= TEMP =======
+        # src_temp_pickle = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\TEMP.pickle"
+        # with open(src_temp_pickle, 'rb') as f:
+        #     lst_to_remove = pickle.load(f)
+        # # ======================
+        lst_tiles_to_process = {}
+        lst_tiles_to_process_path = {}
+        lst_tiles_to_process_res = {}
+        lst_bboxes = {}
+        for _, (x,y) in tqdm(enumerate(list_ranges), total=len(list_ranges)):
+            xmin, xmax = bbox_rounded['min_bound'][0] + x * 1000, bbox_rounded['min_bound'][0] + (x + 1) * 1000
+            ymin, ymax = bbox_rounded['min_bound'][1] + y * 1000, bbox_rounded['min_bound'][1] + (y + 1) * 1000
+            name = f"{x}_{y}"
+            lst_bboxes[name] = {
+                'min_bound': [xmin, ymin, bbox_rounded['min_bound'][2]],
+                'max_bound': [xmax, ymax, bbox_rounded['max_bound'][2]],
+            }
+            tiles = {}
+            for mode, las in big_tiles.items():
+                mask = (
+                    (las.x >= xmin) & (las.x <= xmax) &
+                    (las.y >= ymin) & (las.y <= ymax)
+                )
+
+                tiles[mode] = las[mask]
+
+            skip = False
+            for tile in tiles.values():
+                if len(tile.points) == 0:
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            lst_tiles_to_process_path[name] = []
+            lst_tiles_to_process_res[name] = os.path.join(src_temp_res, f"res_{name}")
+            for mode, tile in tiles.items():
+                src_tile = os.path.join(src_temp_folder, f"tile_{name}_{mode}.laz")
+                lst_tiles_to_process_path[name].append(src_tile)
+                tile.write(src_tile)
+
+            lst_tiles_to_process[name] = [tile for tile in tiles.values()]
 
         # run ICP_process on all files
+        print("Computing ICP on all tiles")
+        lst_to_remove = []
+        for _, (name, tile) in tqdm(enumerate(lst_tiles_to_process.items()), total=len(lst_tiles_to_process)):
+            conf.data.src_pc1 = lst_tiles_to_process_path[name][0]
+            conf.data.src_pc2 = lst_tiles_to_process_path[name][1]
+            conf.data.src_res = lst_tiles_to_process_res[name]
+            bbox_offset = [
+                lst_bboxes[name],
+                [(sup + sub) / 2 for sup, sub in zip(lst_bboxes[name]['min_bound'], lst_bboxes[name]['max_bound'])]
+            ]
+            res = ICP_process(conf, bbox_offset, verbose)
+            if res == -1:
+                lst_to_remove.append(name)
+        for name in lst_to_remove:
+            del lst_tiles_to_process[name]
+            del lst_tiles_to_process_path[name]
+            del lst_tiles_to_process_res[name]
+
+        # ========= TEMP =======
+        src_temp_pickle = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\TEMP.pickle"
+        with open(src_temp_pickle, 'wb') as f:
+            pickle.dump(lst_to_remove, f)
+        # ======================
 
         # merge results
+        merge_results_v2(
+            lst_result_paths=lst_tiles_to_process_res.values(),
+            src_res_merged=src_final_res,
+            crs=conf.data.crs,
+            )
 
-        
+        # delete temp folde
+        # shutil.rmtree(src_temp_folder)
     else:
         ICP_process(conf, verbose)
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     conf = OmegaConf.load("./config/one_file.yaml")
     one_file(conf, conf.args.verbose)
