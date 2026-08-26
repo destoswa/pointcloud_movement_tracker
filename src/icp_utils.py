@@ -334,7 +334,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 def filter_las_by_classification(las, classification_value, field_names, mode="keep"):
     """Filter laspy object by classification and return an Open3D point cloud."""
     assert mode in ['keep', 'remove']
-    print(set(getattr(las, field_names[3])))
+    # print(set(getattr(las, field_names[3])))
     if field_names[3] not in las.point_format.dimension_names:
         mask = np.ones(len(las), dtype=bool)
     elif len(set(las.classification)) == 1:

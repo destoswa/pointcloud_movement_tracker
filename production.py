@@ -3,13 +3,13 @@ import pandas as pd
 from omegaconf import OmegaConf
 from process_one_file import ICP_process
 from tqdm import tqdm
-from src.production_utils import preprocess_into_csv, merge_results
+from src.production_utils import preprocess_into_csv, merge_results_from_csv
 import traceback
 
 
 def production(conf, conf_one_tile):
     if conf.production.src_csv == 'default':
-        conf.production.src_csv = os.path.join(os.path.dirname(conf.production.src_folder_old), 'list_tiles.csv')
+        conf.production.src_csv = os.path.join(os.path.dirname(conf.preprocessing.src_folder_old), 'list_tiles.csv')
 
     # === PREPROCESSING ===
     if conf.preprocessing.do_preprocessing:
@@ -38,7 +38,7 @@ def production(conf, conf_one_tile):
             print(tb)
 
     if conf_prod.production.do_merge_results:
-        merge_results(
+        merge_results_from_csv(
             src_csv=conf_prod.production.src_csv,
             )
             

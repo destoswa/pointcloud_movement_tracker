@@ -133,7 +133,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
-        writer.writerow(['key', 'pc1', 'pc2', 'res', 'status'])
+        writer.writerow(['key', 'src_pc1', 'src_pc2', 'src_res', 'status'])
         for key, f1, f2 in matched:
             writer.writerow([key, os.path.join(src_folder_old, f1), os.path.join(src_folder_new, f2), os.path.join(src_res, f'{key}_res'), 'matched'])
         for key, f1 in unmatched1:
@@ -168,8 +168,7 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
         output_path: path to the output GPKG file
         crs: coordinate reference system
     """
-    # get all layers
-    # layer_names = gpd.list_layers(list_paths[0])["name"].tolist()
+    # link every layer to the files that have it
     layer_names = {}
     for path in list_paths:
         sub_layer_names = gpd.list_layers(path)["name"].tolist()
@@ -179,6 +178,7 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
             else:
                 layer_names[sublayer].append(path)
 
+    # read files and merge them
     for layer_name, paths_in_layer in layer_names.items():
         gdfs = []
         for path in paths_in_layer:
@@ -186,7 +186,6 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
                 gdf = gpd.read_file(path, layer=layer_name)
                 gdfs.append(gdf)
             except Exception as e:
-                # pass
                 print(f"Warning: could not read layer '{layer_name}' from {path}: {e}")
 
         if len(gdfs) == 0:
@@ -199,7 +198,7 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
             print(f"  Layer '{layer_name}': merged {len(gdfs)} files → {len(merged)} features")
 
 
-def merge_results(src_csv, crs="EPSG:2056", verbose=False):
+def merge_results_from_csv(src_csv, crs="EPSG:2056", verbose=True):
     df_tiles = pd.read_csv(src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
 
@@ -207,16 +206,15 @@ def merge_results(src_csv, crs="EPSG:2056", verbose=False):
     src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
 
-    # for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
     for row in df_tiles.iterrows():
         src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
         os.makedirs(src_res, exist_ok=True)
         res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
 
     df_res = pd.DataFrame(res)
-
-    print(f"Merging {len(df_res)} files:")
-    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res), desc="Merging"):
+    if verbose:
+        print(f"Merging {len(df_res)} files:")
+    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res), desc="Merging", disable=verbose==False):
         list_of_files = [f for f in series.to_list() if f]
         if not list_of_files:
             continue
@@ -225,25 +223,17 @@ def merge_results(src_csv, crs="EPSG:2056", verbose=False):
         merge_gpkg(list_of_files, output_path, crs=crs, verbose=verbose)
 
 
-def merge_results_v2(lst_result_paths, src_res_merged, crs="EPSG:2056", verbose=False):
-    # df_tiles = pd.read_csv(src_csv, sep=';')
-    # df_tiles = df_tiles.loc[df_tiles.status == 'matched']
-
+def merge_results_from_list(lst_result_paths, src_res_merged, crs="EPSG:2056", verbose=True):
     res = []
-    # src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
 
-    # for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
-    # for row in df_tiles.iterrows():
     for src_res in lst_result_paths:
-        # src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
-        # os.makedirs(src_res, exist_ok=True)
         res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
 
     df_res = pd.DataFrame(res)
-
-    print(f"Merging {len(df_res)} files:")
-    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res.columns), desc="Merging"):
+    if verbose:
+        print(f"Merging {len(df_res)} files:")
+    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res.columns), desc="Merging", disable=verbose==False):
         list_of_files = [f for f in series.to_list() if f]
         if not list_of_files:
             continue
@@ -253,15 +243,13 @@ def merge_results_v2(lst_result_paths, src_res_merged, crs="EPSG:2056", verbose=
 
 
 if __name__ == "__main__":
-    verbose=False
-    conf_prod = OmegaConf.load('./config/production.yaml')
-    conf_one_tile = OmegaConf.load('./config/one_file.yaml')
+    pass
+    # verbose=False
+    # conf_prod = OmegaConf.load('./config/production.yaml')
+    # conf_one_tile = OmegaConf.load('./config/one_file.yaml')
 
-    # Prepare csv
-    # production(conf_prod, conf_one_tile, verbose)
-
-    if conf_prod.production.do_merge_results:
-        merge_results(
-            src_csv=conf_prod.production.src_csv,
-            prefix=conf_prod.production.prefix,
-            )
+    # if conf_prod.production.do_merge_results:
+    #     merge_results_from_csv(
+    #         src_csv=conf_prod.production.src_csv,
+    #         prefix=conf_prod.production.prefix,
+    #         )

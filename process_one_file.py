@@ -17,7 +17,7 @@ from src.icp_utils import \
     trim_branch, \
     get_nodes_of_level
 from src.format_conversions import convert_one_file
-from src.production_utils import merge_results_v2
+from src.production_utils import merge_results_from_list
 
 
 def ICP_process(conf, bbox_offset=None, verbose=True):
@@ -123,6 +123,11 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             'target': filter_las_by_classification(tiles_original['target'], conf.categories.cat_anthropic, conf.args.field_names),
         }
 
+        # do not postprocess if not enough points
+        if max([len(tiles_ground['source'].points), len(tiles_ground['target'].points)]) < conf.categories.min_points_ground or \
+        max([len(tiles_anthropic['source'].points), len(tiles_anthropic['target'].points)]) < conf.categories.min_points_anthropic:
+            return -1
+    
         roots = {
             'ground': None,
             'anthropic': None,
@@ -145,18 +150,16 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
                     getattr(tiles_original['target'], conf.args.field_names[1]) * tiles_original['target'].header.scale[1] + tiles_original['target'].header.offset[1],
                     getattr(tiles_original['target'], conf.args.field_names[2]) * tiles_original['target'].header.scale[2] + tiles_original['target'].header.offset[2]], axis=1)
         )
-        # else:
-        #     categories = [
-        #             *([conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground), 
-        #             *([conf.categories.cat_anthropic] if isinstance(conf.categories.cat_anthropic, int) else conf.categories.cat_anthropic)
-        #             ]
-        #     pc_source = filter_las_by_classification(tiles_original['source'], categories, conf.args.field_names)
-        #     pc_target = filter_las_by_classification(tiles_original['target'], categories, conf.args.field_names)
+
         tiles_ground = {
             'source': pc_source,
             'target': pc_target,
         }
 
+        # do not postprocess if not enough points
+        if max([len(tiles_ground['source'].points), len(tiles_ground['target'].points)]) < conf.categories.min_points_ground:
+            return -1
+        
         tiles_to_process = [tiles_ground]
 
         roots = {
@@ -398,7 +401,8 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
 
 def one_file(conf, verbose):
     if conf.data.do_tiling:
-        print("Tiling at kilometric scale")
+        if conf.args.verbose:
+            print("Tiling at kilometric scale")
 
         # load files
         if conf.data.src_res == "default":
@@ -470,12 +474,8 @@ def one_file(conf, verbose):
 
         list_ranges = list(product(range(range_x), range(range_y)))
 
-        print("Creating tiles:")
-        # # ========= TEMP =======
-        # src_temp_pickle = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\TEMP.pickle"
-        # with open(src_temp_pickle, 'rb') as f:
-        #     lst_to_remove = pickle.load(f)
-        # # ======================
+        if conf.args.verbose:
+            print("Creating tiles:")
         lst_tiles_to_process = {}
         lst_tiles_to_process_path = {}
         lst_tiles_to_process_res = {}
@@ -515,7 +515,8 @@ def one_file(conf, verbose):
             lst_tiles_to_process[name] = [tile for tile in tiles.values()]
 
         # run ICP_process on all files
-        print("Computing ICP on all tiles")
+        if conf.args.verbose:
+            print("Computing ICP on all tiles")
         lst_to_remove = []
         for _, (name, tile) in tqdm(enumerate(lst_tiles_to_process.items()), total=len(lst_tiles_to_process)):
             conf.data.src_pc1 = lst_tiles_to_process_path[name][0]
@@ -525,31 +526,28 @@ def one_file(conf, verbose):
                 lst_bboxes[name],
                 [(sup + sub) / 2 for sup, sub in zip(lst_bboxes[name]['min_bound'], lst_bboxes[name]['max_bound'])]
             ]
-            res = ICP_process(conf, bbox_offset, verbose)
+            res = ICP_process(conf, bbox_offset, False)
             if res == -1:
                 lst_to_remove.append(name)
+
+        # remove samples that have less than the minimum number of points
         for name in lst_to_remove:
             del lst_tiles_to_process[name]
             del lst_tiles_to_process_path[name]
             del lst_tiles_to_process_res[name]
 
-        # ========= TEMP =======
-        src_temp_pickle = r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\TEMP.pickle"
-        with open(src_temp_pickle, 'wb') as f:
-            pickle.dump(lst_to_remove, f)
-        # ======================
-
         # merge results
-        merge_results_v2(
+        merge_results_from_list(
             lst_result_paths=lst_tiles_to_process_res.values(),
             src_res_merged=src_final_res,
             crs=conf.data.crs,
+            verbose=conf.args.verbose,
             )
 
         # delete temp folde
-        # shutil.rmtree(src_temp_folder)
+        shutil.rmtree(src_temp_folder)
     else:
-        ICP_process(conf, verbose)
+        ICP_process(conf, None, verbose)
 
 if __name__ == "__main__": 
     conf = OmegaConf.load("./config/one_file.yaml")
