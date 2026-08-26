@@ -212,16 +212,10 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         xyz_src = np.asarray(tiles['source'].points, dtype=np.float32)
         xyz_tgt = np.asarray(tiles['target'].points, dtype=np.float32)
 
-        area = ((bbox_dict['max_bound'][0] - bbox_dict['min_bound'][0]) * (bbox_dict['max_bound'][1] - bbox_dict['min_bound'][1])) / 1e6
-        lvl_to_process = max([0, int(np.ceil(np.log(area/conf.args.max_area)/np.log(4)))])
-
         # generate indices if root small enough
-        if area <= conf.args.max_area:
-            indices_src=np.arange(len(xyz_src), dtype=np.int32)
-            indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
-            indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
-        else:
-            indices_src, indices_tgt, indices_tgt_neigh = None, None, None
+        indices_src=np.arange(len(xyz_src), dtype=np.int32)
+        indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
+        indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
 
         # build tree
         time0 = time()
@@ -236,7 +230,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
-            max_area=conf.args.max_area,
+            # max_area=conf.args.max_area,
             is_anthropic=confs[mode]['is_anthropic'],
         )
         if verbose:
@@ -258,25 +252,20 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             }
         
         # run the ICP algorithm on every node of the tree
-        # print(f"Number of points of source: {len(tiles_original['source'].points)} to {len(tiles['source'].points)}")
-        # print(f"Number of points of target: {len(tiles_original['target'].points)} to  {len(tiles['target'].points)}")
-        # quit()
-        lst_tiles_to_icp = get_nodes_of_level(roots[mode], lvl_to_process)
         if verbose:
-            print(f"Processing ICP on {len(lst_tiles_to_icp)} tile{'s' if len(lst_tiles_to_icp) > 1 else ''} of level {lvl_to_process} and area {np.round(area / 4**lvl_to_process, 2)}km^2:")
-        for _, node in tqdm(enumerate(lst_tiles_to_icp), total=len(lst_tiles_to_icp), desc="Processing", disable=verbose==False):
-            run_icp_on_tree(
-                pc_source=tiles['source'], 
-                pc_target=tiles['target'], 
-                node=node, 
-                src_res=pointcloud_res, 
-                args=conf.args, 
-                time_subclouds_creation=time_subclouds_creation, 
-                time_icp=time_icp, 
-                time_subclouds_saving=time_subclouds_saving,
-                pointtoplane_args=args_normal,
-                mode=mode,
-                )
+            print("Processing ICP on every node of the tree (might take a few minutes):")
+        run_icp_on_tree(
+            pc_source=tiles['source'], 
+            pc_target=tiles['target'], 
+            node=roots[mode], 
+            src_res=pointcloud_res, 
+            args=conf.args, 
+            time_subclouds_creation=time_subclouds_creation, 
+            time_icp=time_icp, 
+            time_subclouds_saving=time_subclouds_saving,
+            pointtoplane_args=args_normal,
+            mode=mode,
+            )
 
     # # --- TEMP ---
     # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
@@ -544,7 +533,13 @@ def one_file(conf, verbose):
             verbose=conf.args.verbose,
             )
 
-        # delete temp folde
+        # save config
+        shutil.copyfile(
+                './config/one_file.yaml',
+                os.path.join(src_final_res, 'config.yaml')
+            )
+        
+        # delete temp folder
         shutil.rmtree(src_temp_folder)
     else:
         ICP_process(conf, None, verbose)

@@ -129,7 +129,8 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
     # --------------------------------
     # Write CSV
     # --------------------------------
-    src_res = os.path.join(os.path.dirname(src_folder_old), 'results') if src_res == 'default' else src_res
+    src_res = os.path.join(os.path.dirname(src_folder_old), 'results') if src_res.lower() == 'default' else src_res
+    output_csv = os.path.join(os.path.dirname(src_folder_old), 'files_matching.csv') if output_csv.lower() == 'default' else output_csv
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
