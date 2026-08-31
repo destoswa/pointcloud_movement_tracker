@@ -208,7 +208,7 @@
      <widget class="QCheckBox" name="cb_no_cat">
       <property name="geometry">
        <rect>
-        <x>270</x>
+        <x>190</x>
         <y>0</y>
         <width>151</width>
         <height>20</height>
@@ -216,6 +216,19 @@
       </property>
       <property name="text">
        <string>No category</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="cb_tiling">
+      <property name="geometry">
+       <rect>
+        <x>330</x>
+        <y>0</y>
+        <width>151</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Tiling</string>
       </property>
      </widget>
     </widget>

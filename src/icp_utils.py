@@ -7,6 +7,34 @@ from plyfile import PlyData
 if __name__ != "__main__":
     from src.quadnode import QuadNode
 import warnings
+from src.format_conversions import convert_one_file
+
+
+def prepare_files(src_pc1, src_pc2, verbose=True):
+    temp_files = []
+    src_pc_out = []
+    for src_pc in [src_pc1, src_pc2]:
+        src_wo_ext, format = os.path.splitext(src_pc)
+        format = format[1:] # remove the '.'
+        if format not in ['las', 'laz']:
+            if verbose:
+                print(f"Converting following file into LAZ: {src_pc}")
+            src_file_out = os.path.splitext(src_wo_ext)[0] + '.laz'
+
+            convert_one_file(
+                src_file_in=src_pc,
+                src_file_out=src_file_out,
+                in_type=format,
+                out_type='laz',
+                verbose=False
+            )
+
+            src_pc_out.append(src_file_out)
+            temp_files.append(src_file_out)
+        else:
+            src_pc_out.append(src_pc)
+
+    return src_pc_out[0], src_pc_out[1], temp_files
 
 
 def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, keep_all=False):
@@ -138,7 +166,7 @@ def points_in_bbox(xyz_src, xyz_tgt, node, bbox):
 def build_quadtree(
         xyz_src, xyz_tgt, parent, bbox, 
         indices_src, indices_tgt, indices_tgt_neigh, 
-        level, min_tile_size, min_points, is_anthropic=False
+        level, min_tile_size, min_points, grid_pos, is_anthropic=False
         ):
     """Recursively build quadtree based on point density."""
     if isinstance(indices_src, np.ndarray):
@@ -152,7 +180,7 @@ def build_quadtree(
         else:
             center = np.mean(xyz_src, axis=0)
             
-    node = QuadNode(bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, parent, is_anthropic)
+    node = QuadNode(bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, grid_pos, parent, is_anthropic)
 
     # stopping conditions
     tile_size = np.min((np.array(bbox['max_bound']) - np.array(bbox['min_bound']))[0:2])
@@ -177,12 +205,16 @@ def build_quadtree(
 
     tile_size = np.min((np.array(sub_bboxes[0]['max_bound']) - np.array(sub_bboxes[0]['min_bound']))[0:2])
     if tile_size > min_tile_size:
-        for subbbox in sub_bboxes:
+        for id_subbox, subbbox in enumerate(sub_bboxes):
             sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
 
+            sub_grid_pos = [
+                id_subbox % 2 + grid_pos[0] * 2**level, 
+                id_subbox // 2 + grid_pos[1] * 2**level]
+            
             child = build_quadtree(
                 xyz_src, xyz_tgt, node, subbbox, sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh,
-                level + 1, min_tile_size, min_points, is_anthropic,
+                level + 1, min_tile_size, min_points, sub_grid_pos, is_anthropic,
             )
             node.children.append(child)
 

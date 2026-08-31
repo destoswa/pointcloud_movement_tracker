@@ -2,9 +2,9 @@ data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\full_22_25\Taroko_ToTo_2022_cropped_on_2025.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\full_22_25\Taroko_ToTo_2025_1m.laz
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\Taroko_ToTo_2022_cropped_on_2025_small_subsampled_2m.laz
-  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\Taroko_ToTo_2025_1m_small_subsampled_2m.laz
-  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_10_swamp_and_lake\2588_1169_swamp\swisssurface3d_2018_2588-1169_2056_5728.ply
-  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_10_swamp_and_lake\2588_1169_swamp\swisssurface3d_2024_2588-1169_2056_5728.ply
+  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_trD:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_34_huge_translation\test_real_sample\swisssurface3d_2018_2589-1169_2056_5728.lazacking_dev\data\test_33_tiling\Taroko_ToTo_2025_1m_small_subsampled_2m.laz
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_35_mnt\Hillshade2015_2589_1169.tif
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_35_mnt\Hillshade2019_2589_1169.tif
   # src_res: D:\Terranum_SD\99_Data\Taiwan_point_cloud\22-25
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
@@ -15,12 +15,12 @@ data:
   crs: "EPSG:2056"
   do_tiling: False
 args:
-  method: pointtopoint          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
+  method: pointtoplane          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
   pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
   pointtoplane_max_nn: 50       # with "pointtoplane" method - max number of neighbors used for normal estimation
   max_iteration: 30             # max number of ICP iterations per tile
   threshold: 1e-4               # convergence threshold on relative fitness and RMSE
-  max_correspondence: 1.5       # max correspondence distance (m) for ICP point matching — single value or list per level
+  max_correspondence: 1.0       # max correspondence distance (m) for ICP point matching — single value or list per level
   huge_translation: [0, 0, 0]   # global offset subtracted from coordinates for numerical stability (Swiss LV95)
   field_names:  [X, Y, Z, classification]   # names of pointcloud fields coorresponding to cartesian positions and category field
   do_output_transformed: False  # whether to save transformed subclouds as PLY files for debugging
@@ -40,7 +40,7 @@ categories:
 postprocessing:
   src_transforms: default       # path to saved transforms pickle file (default = auto-detect from src_res)
   absurd_dist_local: 5          # local 2D displacement threshold (m) above which a result is flagged as artifact
-  absurd_dist_global: 20        # global 3D displacement threshold (m) above which a result is flagged as artifact
+  absurd_dist_global: 20       # global 3D displacement threshold (m) above which a result is flagged as artifact
   to_keep:
     full_tree: True             # whether to save a GPKG with every tiles of every layer
     layers: True                # whether to save the tiles layer by layer

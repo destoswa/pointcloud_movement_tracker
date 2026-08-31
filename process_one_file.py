@@ -15,6 +15,7 @@ from src.icp_utils import \
     node_to_list, \
     find_node, \
     trim_branch, \
+    prepare_files, \
     get_nodes_of_level
 from src.format_conversions import convert_one_file
 from src.production_utils import merge_results_from_list
@@ -40,23 +41,9 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     pointcloud_formats = [os.path.splitext(x)[1][1:] for x in [conf.data.src_pc1, conf.data.src_pc2]]
     files_to_remove = []
     if not all([x.lower() in ['las', 'laz'] for x in pointcloud_formats]):
-        for pc_key, format in zip(['data.src_pc1', 'data.src_pc2'], pointcloud_formats):
-            if format not in ['las', 'laz']:
-                src_file_original = OmegaConf.select(conf, pc_key)
-                if verbose:
-                    print(f"Converting following file into LAZ: {src_file_original}")
-                src_file_out = os.path.splitext(src_file_original)[0] + '.laz'
-
-                convert_one_file(
-                    src_file_in=src_file_original,
-                    src_file_out=src_file_out,
-                    in_type=format,
-                    out_type='laz'
-                )
-
-                OmegaConf.update(conf, pc_key, src_file_out)
-
-                files_to_remove.append(src_file_out)
+        src_pc1, src_pc2, files_to_remove = prepare_files(conf.data.src_pc1, conf.data.src_pc2, verbose)
+        OmegaConf.update(conf, 'data.src_pc1', src_pc1)
+        OmegaConf.update(conf, 'data.src_pc2', src_pc2)
 
     # === PROCESSING ===
     # prepare results
@@ -91,8 +78,21 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         x_mean = float(np.mean(tiles_original['source'].x))
         y_mean = float(np.mean(tiles_original['source'].y))
         z_mean = float(np.mean(tiles_original['source'].z))
-        # offset = [conf.args.huge_translation[0], conf.args.huge_translation[1], z_mean]
-        offset = [x_mean, y_mean, z_mean]
+
+        # TEMP TEST OFFEST IMPACT
+        def random_point_on_circle(xy, radius=100):
+            angle = np.random.uniform(0, 2 * np.pi)
+            xy_prime = (
+                xy[0] + radius * np.cos(angle),
+                xy[1] + radius * np.sin(angle)
+            )
+            return xy_prime
+
+        xy = np.array([x_mean, y_mean])
+        [x_prime, y_prime] = random_point_on_circle(xy, 0)
+        # =========
+
+        offset = np.array([x_prime, y_prime, z_mean])
 
         bbox_dict = {
             "min_bound": (tiles_original['source'].header.min - offset).tolist(),
@@ -188,15 +188,6 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     time_icp = []
     time_subclouds_saving = []
 
-    # # --- TEMP ---
-    # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
-    # src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
-    # with open(src_ground, 'rb') as f:
-    #     roots['ground'] = pickle.load(f)
-    # with open(src_anthropic, 'rb') as f:
-    #     roots['anthropic'] = pickle.load(f)
-    # # ---
-
     for tiles, mode in zip(tiles_to_process, roots.keys()):
         # test if pointcloud empty
         if len(tiles['source'].points) == 0 and len(tiles['target'].points) == 0:
@@ -230,18 +221,12 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
-            # max_area=conf.args.max_area,
+            grid_pos=[0,0],
             is_anthropic=confs[mode]['is_anthropic'],
         )
         if verbose:
             print("time to build quadtree: ", time() - time0)
         time_quadtree_creation += time() - time0
-
-        # # === TEMP ===
-        # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
-        # with open(src_ground, 'wb')   as f:
-        #     pickle.dump(roots['ground'], f)
-        # # ===============================
 
         # arguments for normal computation
         do_compute_normals = conf.args.method == 'pointtoplane' or (conf.args.method == 'mix' and mode == 'ground')
@@ -411,23 +396,10 @@ def one_file(conf, verbose):
         pointcloud_formats = [os.path.splitext(x)[1][1:] for x in [conf.data.src_pc1, conf.data.src_pc2]]
         files_to_remove = []
         if not all([x.lower() in ['las', 'laz'] for x in pointcloud_formats]):
-            for pc_key, format in zip(['data.src_pc1', 'data.src_pc2'], pointcloud_formats):
-                if format not in ['las', 'laz']:
-                    src_file_original = OmegaConf.select(conf, pc_key)
-                    if verbose:
-                        print(f"Converting following file into LAZ: {src_file_original}")
-                    src_file_out = os.path.splitext(src_file_original)[0] + '.laz'
-
-                    convert_one_file(
-                        src_file_in=src_file_original,
-                        src_file_out=src_file_out,
-                        in_type=format,
-                        out_type='laz'
-                    )
-
-                    OmegaConf.update(conf, pc_key, src_file_out)
-
-                    files_to_remove.append(src_file_out)
+            src_pc1, src_pc2, files_to_remove = prepare_files(conf.data.src_pc1, conf.data.src_pc2, verbose)
+            OmegaConf.update(conf, 'data.src_pc1', src_pc1)
+            OmegaConf.update(conf, 'data.src_pc2', src_pc2)
+            
         big_tiles = {
                 'source': read_pc_with_cat_timming(conf.data.src_pc1, "", [], True),
                 'target': read_pc_with_cat_timming(conf.data.src_pc2, "", [], True),
@@ -539,8 +511,10 @@ def one_file(conf, verbose):
                 os.path.join(src_final_res, 'config.yaml')
             )
         
-        # delete temp folder
+        # delete temp folder and files
         shutil.rmtree(src_temp_folder)
+        for file_src in files_to_remove:
+            os.delete(file_src)
     else:
         ICP_process(conf, None, verbose)
 

@@ -6,6 +6,7 @@ open3d
 pandas
 plyfile
 Shapely
+rasterio
 tqdm
 pathvalidate
 pyqt6-tools

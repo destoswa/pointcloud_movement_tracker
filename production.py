@@ -49,4 +49,3 @@ if __name__ == "__main__":
 
     # Prepare csv
     production(conf_prod, conf_one_tile)
-

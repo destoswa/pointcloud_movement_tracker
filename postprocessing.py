@@ -101,7 +101,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
                 output_path=src_out_gpkg_layers_tiles,
                 to_export='boxes',
                 offset=offset,
-                layer_name=f"Level {lvl}",
+                layer_name=f"Level_{lvl}",
                 crs=crs,
                 verbose=verbose,
             )
@@ -113,7 +113,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
                 output_path=src_out_gpkg_layers_centers,
                 to_export='points',
                 offset=offset,
-                layer_name=f"Level {lvl}",
+                layer_name=f"Level_{lvl}",
                 crs=crs,
                 verbose=verbose,
             )

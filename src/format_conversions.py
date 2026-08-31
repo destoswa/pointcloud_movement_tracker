@@ -7,6 +7,7 @@ from pyproj import Transformer, CRS
 import laspy
 import open3d as o3d
 import traceback
+import rasterio
 
 
 class Convertions:
@@ -442,17 +443,116 @@ class Convertions:
             print(f"  Points : {len(xyz)}")
             print(f"  Fields : {list(extra_fields.keys())}")
 
+    @staticmethod
+    def convert_tif_to_laz(in_tif, out_laz, verbose=True, **kwargs):
+        def dem_to_pointcloud(src_dem, nodata=None, verbose=True):
+            """
+            Convert a DEM GeoTIFF to an Open3D PointCloud.
 
-def convert_one_file(src_file_in, src_file_out, in_type, out_type, **kwargs):
-    assert in_type in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd']
-    assert out_type in ['las', 'laz', 'txt', 'npz', 'ply']
+            Parameters:
+                src_dem (str): Path to DEM.
+                nodata (float|None): Override nodata value.
+
+            Returns:
+                o3d.geometry.PointCloud
+            """
+
+            with rasterio.open(src_dem) as ds:
+                dem = ds.read(1)
+                transform = ds.transform
+
+                if nodata is None:
+                    nodata = ds.nodata
+            if verbose:
+                print(f"Nodata value from file: {nodata}")  # check what it actually is
+
+            # Handle all nodata cases
+            mask = np.ones(dem.shape, dtype=bool)
+            if nodata is not None:
+                mask &= ~np.isclose(dem, nodata, rtol=1e-3)  # use isclose for float comparison
+            mask &= ~np.isnan(dem)
+            mask &= ~np.isinf(dem)
+
+            rows, cols = np.where(mask)
+
+            xs, ys = rasterio.transform.xy(
+                transform,
+                rows,
+                cols,
+                offset="center"
+            )
+
+            xs = np.asarray(xs)
+            ys = np.asarray(ys)
+
+            xyz = np.column_stack([
+                xs,
+                ys,
+                dem[rows, cols]
+            ])
+            
+            pc = o3d.geometry.PointCloud()
+            pc.points = o3d.utility.Vector3dVector(xyz)
+
+            return pc
+
+        def save_o3d_to_laz(pc, output_path, crs=None, verbose=True):
+            xyz = np.asarray(pc.points)
+
+            if len(xyz) == 0:
+                print("Warning: empty point cloud, skipping.")
+                return
+
+            offsets = xyz.min(axis=0)
+            xyz_local = xyz - offsets
+            max_range = xyz_local.max(axis=0)
+
+            if verbose:
+                print(f"N points  : {len(xyz)}")
+                print(f"Offsets   : {offsets}")
+                print(f"Max range : {max_range}")
+
+            # Safe scale: ensure no axis overflows int32
+            # Use 0.001 unless range is too large, then scale up accordingly
+            max_range_total = max_range.max()
+            if max_range_total == 0 or np.isnan(max_range_total):
+                safe_scale = 0.001
+            else:
+                safe_scale = max(0.001, float(max_range_total) / 2e9)
+                # Round to nearest clean power-of-10 multiple
+                magnitude = 10 ** np.floor(np.log10(safe_scale))
+                safe_scale = np.ceil(safe_scale / magnitude) * magnitude
+            if verbose:
+                print(f"Scale     : {safe_scale}")
+
+            header = laspy.LasHeader(point_format=3, version="1.4")
+            header.scales = [safe_scale, safe_scale, safe_scale]
+            header.offsets = offsets
+
+            if crs is not None:
+                header.add_crs(crs)
+
+            las = laspy.LasData(header)
+            las.x = xyz[:, 0]
+            las.y = xyz[:, 1]
+            las.z = xyz[:, 2]
+            las.write(output_path)
+
+        pc = dem_to_pointcloud(in_tif, verbose=verbose)
+        save_o3d_to_laz(pc, out_laz, verbose=verbose)
+        if verbose:
+            print(f"✅ Wrote LAZ file: {out_laz}")
+
+def convert_one_file(src_file_in, src_file_out, in_type, out_type, verbose=True, **kwargs):
+    assert in_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd', 'tif', 'tiff']
+    assert out_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'tif', 'tiff']
     assert in_type != out_type
 
     if not hasattr(Convertions, f"convert_{in_type}_to_{out_type}"):
         print(f"No function for converting {in_type} into {out_type}!!")
         return
     try:
-        _ = getattr(Convertions, f"convert_{in_type}_to_{out_type}")(src_file_in, src_file_out, verbose=False, **kwargs)
+        _ = getattr(Convertions, f"convert_{in_type}_to_{out_type}")(src_file_in, src_file_out, verbose=verbose, **kwargs)
     except Exception as e:
         print(f"conversion from {in_type} to {out_type} for sample {src_file_in} failed")
         print(traceback.format_exc())
@@ -474,8 +574,8 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, offs
         - None: Saves all converted files into the specified output folder.
     """
     
-    assert in_type in ['las', 'laz', 'txt']
-    assert out_type in ['las', 'laz', 'txt']
+    assert in_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd', 'tif', 'tiff']
+    assert out_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'tif', 'tiff']
     assert in_type != out_type
 
     if not hasattr(Convertions, f"convert_{in_type}_to_{out_type}"):

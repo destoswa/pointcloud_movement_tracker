@@ -105,6 +105,7 @@ class mainUI(QMainWindow):
         # checkbox if no categories
         self.cb_no_cat.setChecked(self.conf.categories.no_cat)
         self._cb_no_cat_clicked()
+        self.cb_tiling.setChecked(self.conf.data.do_tiling)
         # self.fr_options_split.setEnabled(not self.conf.categories.no_cat)
 
         # outputs
@@ -239,6 +240,7 @@ class mainUI(QMainWindow):
             OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_global_tile.text()))
             OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
         OmegaConf.update(self.conf, 'postprocessing.to_keep.initial_alignment', self.cbb_init_alignment.currentText())
+        OmegaConf.update(self.conf, 'data.do_tiling', self.cb_tiling.isChecked())
         # OmegaConf.update(self.conf, 'postprocessing.to_keep.layers', self.cb_layers.isChecked())
         # OmegaConf.update(self.conf, 'postprocessing.to_keep.full_tree', self.cb_full_tree.isChecked())
 

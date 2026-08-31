@@ -3,9 +3,10 @@ import random
 
 class QuadNode:
     """Quadtree node storing spatial bbox, point indices, level, and children."""
-    def __init__(self, bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, parent=None, is_anthropic=False):
+    def __init__(self, bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, grid_pos, parent=None, is_anthropic=False):
         self.bbox = bbox
-        self.id = int(np.sum(np.array(self.bbox['min_bound']) * np.array([10**3, 10**6, 10**9])) + level)
+        # self.id = int(np.sum(np.array(self.bbox['min_bound']) * np.array([10**3, 10**6, 10**9])) + level)
+        self.id = int(np.sum(np.array(grid_pos) * np.array([10**3, 10**6])) + level)
         self.center = center
         self.indices_src = indices_src
         self.indices_tgt = indices_tgt
@@ -17,13 +18,11 @@ class QuadNode:
         self.global_transform = np.eye(4)
         self.local_transform = np.eye(4)
         self.metrics = {}
-        # self.size = np.min([len(indices_src), len(indices_tgt)])
         self.parent = parent
         self.children = []
         self.anthropic_state = 0 if is_anthropic else -1   # 0 = normal, 1 = new building, 2 = destruction
         self.is_leaf = True
         self.is_absurd = False
-        # self.test = random.random()
 
     def __len__(self):
         counter = len(self.children)

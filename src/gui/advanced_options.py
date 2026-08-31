@@ -27,12 +27,13 @@ class AdvancedOptions(QMainWindow):
         # self.le_data_suffixe.setText(str(self.conf.data.res_prefix))
         self.cb_output_transformed.setChecked(self.conf.args.do_output_transformed)
         self.le_output_transformed.setText(str(self.conf.args.output_level))
+        self.le_crs.setText(str(self.conf.data.crs))
 
         # process:
         self.le_max_iter.setText(str(self.conf.args.max_iteration))
         self.le_threshold.setText(str(self.conf.args.threshold))
         self.le_max_correspondance.setText(str(self.conf.args.max_correspondence))
-        self.le_max_area.setText(str(self.conf.args.max_area))
+        # self.le_max_area.setText(str(self.conf.args.max_area))
         self.le_ht_x.setText(str(self.conf.args.huge_translation[0]))
         self.le_ht_y.setText(str(self.conf.args.huge_translation[1]))
         self.le_ht_z.setText(str(self.conf.args.huge_translation[2]))
@@ -80,7 +81,7 @@ class AdvancedOptions(QMainWindow):
                     assert test_value(self, will_it_float(x), self.le_max_correspondance, self.scrollArea)
             else:
                 assert test_value(self, will_it_float(self.le_max_correspondance.text()), self.le_max_correspondance, self.scrollArea)
-            assert test_value(self, test_value(self, will_it_float(self.le_max_area.text()), self.le_max_area, self.scrollArea), self.le_max_area, self.scrollArea)
+            # assert test_value(self, test_value(self, will_it_float(self.le_max_area.text()), self.le_max_area, self.scrollArea), self.le_max_area, self.scrollArea)
             assert test_value(self, will_it_float(self.le_ht_x.text()), self.le_ht_x, self.scrollArea)
             assert test_value(self, will_it_float(self.le_ht_y.text()), self.le_ht_y, self.scrollArea)
             assert test_value(self, will_it_float(self.le_ht_z.text()), self.le_ht_z, self.scrollArea)
@@ -108,6 +109,7 @@ class AdvancedOptions(QMainWindow):
         OmegaConf.update(self.conf, 'data.res_suffixe', self.le_data_suffixe.text())
         OmegaConf.update(self.conf, 'args.do_output_transformed', self.cb_output_transformed.isChecked())
         OmegaConf.update(self.conf, 'args.output_level', int(self.le_output_transformed.text()))
+        OmegaConf.update(self.conf, 'data.crs', self.le_crs.text())
 
         # process:
         OmegaConf.update(self.conf, 'args.max_iteration', int(self.le_max_iter.text()))
@@ -116,7 +118,7 @@ class AdvancedOptions(QMainWindow):
             OmegaConf.update(self.conf, 'args.max_correspondence', literal_eval(self.le_max_correspondance.text()))
         else:
             OmegaConf.update(self.conf, 'args.max_correspondence', float(self.le_max_correspondance.text()))
-        OmegaConf.update(self.conf, 'args.max_area', float(self.le_max_area.text()))
+        # OmegaConf.update(self.conf, 'args.max_area', float(self.le_max_area.text()))
         OmegaConf.update(self.conf, 'args.huge_translation', [
             float(self.le_ht_x.text()), 
             float(self.le_ht_y.text()), 
