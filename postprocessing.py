@@ -126,7 +126,7 @@ if __name__ == "__main__":
     if conf.postprocessing.src_transforms == 'default':
         if conf.data.src_res == 'default':
             conf.data.src_res = os.path.join(os.path.dirname(conf.data.src_pc1), 'results')
-        src_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_quadtree_transforms.pickle')
+        src_transforms = os.path.join(conf.data.src_res, 'quadtree_transforms.pickle')
     else:
         src_transforms = conf.postprocessing.src_transforms
 

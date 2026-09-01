@@ -15,7 +15,7 @@ data:
   crs: "EPSG:2056"
   do_tiling: False
 args:
-  method: pointtoplane          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
+  method: pointtopoint          # ICP method: pointtopoint, pointtoplane, gicp, or mix (pointtoplane for ground, pointtopoint for rest)
   pointtoplane_radius: 2.0      # with "pointtoplane" method - radius (m) for normal estimation KDTree search
   pointtoplane_max_nn: 50       # with "pointtoplane" method - max number of neighbors used for normal estimation
   max_iteration: 30             # max number of ICP iterations per tile

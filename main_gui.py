@@ -38,12 +38,13 @@ class mainUI(QMainWindow):
         self.btn_epoch2.clicked.connect(lambda: browse(self, self.le_epoch2))
         self.btn_res_dest.clicked.connect(lambda: browse_folder(self, self.le_res_dest))
         self.btn_csv_file.clicked.connect(lambda: browse(self, self.le_csv_file, file_types="CSV files (*.csv)"))
-        self.btn_post_pickle.clicked.connect(lambda: browse(self, self.le_post_pickle, file_types="Pickle files (*.pickle *.pkl)"))
+        self.btn_post_file.clicked.connect(lambda: browse(self, self.le_post_file, file_types="Pickle or CSV files (*.pickle *.pkl *.csv)"))
         self.btn_advanced.clicked.connect(self._open_advanced_options_form)
         self.btn_generation_csv.clicked.connect(self._open_csv_gen_form)
         self.btn_clear_logs.clicked.connect(self._clear_logs)
 
         # top menus 
+        self.actionLoad_config.triggered.connect(self._load_config)
         self.actionSingle.triggered.connect(lambda: self._select_mode('Single file', 'single', self.page_single))
         self.actionMultiple.triggered.connect(lambda: self._select_mode('Multiple files', 'multiple', self.page_multiple))
         self.actionPostprocessing.triggered.connect(lambda: self._select_mode('Postprocessing on existing quadtree', 'postprocessing', self.page_postprocessing))
@@ -64,23 +65,24 @@ class mainUI(QMainWindow):
             sys.stderr = self.stream
 
         # --- Initial state of objects ---
-        self.update_form()
-
-    def update_form(self):
         conf_single = OmegaConf.load('./config/one_file.yaml')
         conf_multiple = OmegaConf.load('./config/production.yaml')
         self.conf = OmegaConf.merge(conf_single, conf_multiple)
 
         self._select_mode('Single file', 'single', self.page_single)
 
+        self.update_form()
+
+    def update_form(self):
         # inputs
         self.le_epoch1.setText(str(self.conf.data.src_pc1))
         self.le_epoch2.setText(str(self.conf.data.src_pc2))
         self.le_res_dest.setText(str(self.conf.data.src_res))
         self.le_prefix.setText(str(self.conf.data.res_prefix))
         self.le_csv_file.setText(str(self.conf.production.src_csv))
+        self.le_multi_prefix.setText(str(self.conf.production.prefix))
         self.le_post_prefix.setText(str(self.conf.data.res_prefix))
-        self.le_post_pickle.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'results/{self.conf.data.res_prefix}_quadtree_transforms.pickle'))
+        self.le_post_file.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'results/{self.conf.data.res_prefix}_quadtree_transforms.pickle'))
 
         # checkbox if split
         self.cb_split.setChecked(self.conf.categories.split_ground_anthropic)
@@ -106,50 +108,26 @@ class mainUI(QMainWindow):
         self.cb_no_cat.setChecked(self.conf.categories.no_cat)
         self._cb_no_cat_clicked()
         self.cb_tiling.setChecked(self.conf.data.do_tiling)
-        # self.fr_options_split.setEnabled(not self.conf.categories.no_cat)
 
         # outputs
         init_alignment_id = ['both', 'with', 'without'].index(self.conf.postprocessing.to_keep.initial_alignment)
         self.cbb_init_alignment.setCurrentIndex(init_alignment_id)
-        # self.cb_layers.setChecked(self.conf.postprocessing.to_keep.layers)
-        # self.cb_full_tree.setChecked(self.conf.postprocessing.to_keep.full_tree)
 
-    def _test_value(self, test_res, object, scrollArea=None) -> bool:
-        if test_res:
-            return True
-        else:
-            self.blink_timer = Blinker(object, color_on="red", interval_ms=300, duration_ms=3000)
-            self.blink_timer.start()
-            if scrollArea != None:
-                scrollArea.ensureWidgetVisible(object, xMargin=10, yMargin=10)
+    # def _test_value(self, test_res, object, scrollArea=None) -> bool:
+    #     if test_res:
+    #         return True
+    #     else:
+    #         self.blink_timer = Blinker(object, color_on="red", interval_ms=300, duration_ms=3000)
+    #         self.blink_timer.start()
+    #         if scrollArea != None:
+    #             scrollArea.ensureWidgetVisible(object, xMargin=10, yMargin=10)
 
-            return False
+    #         return False
     
     def _write_log(self, text):
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
         self.log_box.insertPlainText(text)
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
-
-    # def _browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
-    #     path, _ = QFileDialog.getOpenFileName(
-    #         self, "Select file", "src",
-    #         filter=f"{file_types};;All files (*)"
-    #     )
-    #     if path:
-    #         if hasattr(line_edit, 'setText'):
-    #             line_edit.setText(path)
-    #         else:
-    #             return path
-
-    # def _browse_folder(self, line_edit):
-    #     path = QFileDialog.getExistingDirectory(
-    #         self, "Select folder", ""
-    #     )
-    #     if path:
-    #         if hasattr(line_edit, 'setText'):
-    #             line_edit.setText(path)
-    #         else:
-    #             return path
 
     def _select_mode(self, text, mode, page):
         self.lbl_mode.setText(text)
@@ -203,14 +181,51 @@ class mainUI(QMainWindow):
     def _clear_logs(self):
         self.log_box.setText('')
 
+    def _on_worker_error(self, traceback_str):
+        print("\n" + "="*50)
+        print("ERROR OCCURRED:")
+        print(traceback_str)
+        print("="*50 + "\n")
+
+    def _cb_split_clicked(self):
+        self.fr_global_limits.setEnabled(not self.cb_split.isChecked())
+        self.fr_ground_limits.setEnabled(self.cb_split.isChecked())
+        self.fr_anthropic_limits.setEnabled(self.cb_split.isChecked())
+
+    def _cb_no_cat_clicked(self):
+        if self.cb_no_cat.isChecked():
+            self.cb_split.setChecked(False)
+            self.cb_split.setEnabled(False)
+            self.fr_ground_limits.setEnabled(False)
+            self.fr_anthropic_limits.setEnabled(False)
+            self.fr_global_limits.setEnabled(True)
+        else:
+            self.cb_split.setEnabled(True)
+
+    def _load_config(self):
+        # select file
+        src_config = browse(self, file_types="YAML (*.yaml)")
+        if src_config == None:
+            return
+
+        # update config
+        print(f"Loading config from : {src_config}")
+        conf = OmegaConf.load(src_config)
+        for section in ['data', 'args', 'categories', 'postprocessing', 'production', 'preprocessing']:
+            if hasattr(conf, section):
+                OmegaConf.update(self.conf, section,  OmegaConf.select(conf, section))
+        self.update_form()
+
     def _run_algorithm(self):
         # Test values
         try:
             if self.mode == 'single':
                 assert test_value(self, os.access(self.le_epoch1.text(), os.W_OK), self.le_epoch1)
                 assert test_value(self, os.access(self.le_epoch2.text(), os.W_OK), self.le_epoch2)
-            else:
+            if self.mode == 'multiple':
                 assert test_value(self, os.access(self.le_csv_file.text(), os.W_OK), self.le_csv_file)
+            if self.mode == 'postprocessing':
+                assert test_value(self, os.access(self.le_post_file.text(), os.W_OK), self.le_post_file)
             
             if self.cb_split.isChecked():
                 assert test_value(self, will_it_float(self.le_ground_tile.text()), self.le_ground_tile)
@@ -241,42 +256,25 @@ class mainUI(QMainWindow):
             OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
         OmegaConf.update(self.conf, 'postprocessing.to_keep.initial_alignment', self.cbb_init_alignment.currentText())
         OmegaConf.update(self.conf, 'data.do_tiling', self.cb_tiling.isChecked())
-        # OmegaConf.update(self.conf, 'postprocessing.to_keep.layers', self.cb_layers.isChecked())
-        # OmegaConf.update(self.conf, 'postprocessing.to_keep.full_tree', self.cb_full_tree.isChecked())
 
         self.btn_run_process.setEnabled(False)
         if self.mode == 'single':
             self.worker = WorkerThread(ICP_process, self.conf, self.conf.args.verbose)
         elif self.mode == 'multiple':
             OmegaConf.update(self.conf, 'preprocessing.do_preprocessing', False)
-            self.worker = WorkerThread(production, self.conf, self.conf, True)
+            self.worker = WorkerThread(production, self.conf)
         elif self.mode == 'postprocessing':
-            self.conf.postprocessing.src_transforms = self.le_post_pickle.text()
-            self.worker = WorkerThread(run_postprocessing, self.conf)
+            ext_file = os.path.splitext(self.le_post_file.text())[1]
+            if ext_file.lower() in ['.pickle', '.pkl']:
+                self.conf.postprocessing.src_transforms = self.le_post_file.text()
+                self.worker = WorkerThread(run_postprocessing, self.conf)
+            elif ext_file.lower() == '.csv':
+                self.conf.production.postprocess_only = True
+                self.conf.src_csv = self.le_post_file.text()
+                self.worker = WorkerThread(production, self.conf)
         self.worker.finished.connect(lambda: self.btn_run_process.setEnabled(True))
         self.worker.error_occurred.connect(self._on_worker_error)
         self.worker.start()
-
-    def _on_worker_error(self, traceback_str):
-        print("\n" + "="*50)
-        print("ERROR OCCURRED:")
-        print(traceback_str)
-        print("="*50 + "\n")
-
-    def _cb_split_clicked(self):
-        self.fr_global_limits.setEnabled(not self.cb_split.isChecked())
-        self.fr_ground_limits.setEnabled(self.cb_split.isChecked())
-        self.fr_anthropic_limits.setEnabled(self.cb_split.isChecked())
-
-    def _cb_no_cat_clicked(self):
-        if self.cb_no_cat.isChecked():
-            self.cb_split.setChecked(False)
-            self.cb_split.setEnabled(False)
-            self.fr_ground_limits.setEnabled(False)
-            self.fr_anthropic_limits.setEnabled(False)
-            self.fr_global_limits.setEnabled(True)
-        else:
-            self.cb_split.setEnabled(True)
 
     def install_exception_hook(self):
         def handle_exception(exc_type, exc_value, exc_tb):
@@ -308,7 +306,6 @@ class docUI(QMainWindow):
     def __init__(self, parent=None):
         super(docUI, self).__init__(parent)
         loadUi("src/gui/documentation.ui", self)
-        # self.webView.load(QUrl.fromLocalFile(r"D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\src\gui\css-test-page.html"))
 
 
 if __name__ == "__main__":

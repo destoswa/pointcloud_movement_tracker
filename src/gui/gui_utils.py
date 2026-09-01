@@ -42,7 +42,9 @@ def is_a_path(filePath: str) -> bool:
 
 
 def browse(self, line_edit=None, file_types="Point Clouds (*.las *.laz *.pcd *.ply)"):
-    src_of_search = os.path.dirname(line_edit.text()) if is_a_path(line_edit.text()) else ''
+    src_of_search = ""
+    if hasattr(line_edit, 'setText'):
+        src_of_search = os.path.dirname(line_edit.text()) if is_a_path(line_edit.text()) else ''
     path, _ = QFileDialog.getOpenFileName(
         self, "Select file", src_of_search,
         filter=f"{file_types};;All files (*)"

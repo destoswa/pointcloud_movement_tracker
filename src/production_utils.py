@@ -199,7 +199,7 @@ def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
             print(f"  Layer '{layer_name}': merged {len(gdfs)} files → {len(merged)} features")
 
 
-def merge_results_from_csv(src_csv, crs="EPSG:2056", verbose=True):
+def merge_results_from_csv(src_csv, prefix, crs="EPSG:2056", verbose=True):
     df_tiles = pd.read_csv(src_csv, sep=';')
     df_tiles = df_tiles.loc[df_tiles.status == 'matched']
 
@@ -207,16 +207,18 @@ def merge_results_from_csv(src_csv, crs="EPSG:2056", verbose=True):
     src_res_merged = os.path.join(os.path.dirname(src_csv), 'results_merged')
     os.makedirs(src_res_merged, exist_ok=True)
 
-    for row in df_tiles.iterrows():
+    for _, row in df_tiles.iterrows():
         src_res = os.path.join(os.path.dirname(src_csv), row.src_res)
         os.makedirs(src_res, exist_ok=True)
-        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
+        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if x.endswith('gpkg') and x.split('_')[0] == prefix])
 
     df_res = pd.DataFrame(res)
     if verbose:
         print(f"Merging {len(df_res)} files:")
-    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res), desc="Merging", disable=verbose==False):
-        list_of_files = [f for f in series.to_list() if f]
+    for i in tqdm(range(df_res.values.shape[1]), total=df_res.values.shape[1], desc="Merging"):
+    # for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res), desc="Merging"):
+        # list_of_files = [f for f in series.to_list() if f]
+        list_of_files = df_res.values[:,i].tolist()
         if not list_of_files:
             continue
         merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"

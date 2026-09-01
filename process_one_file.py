@@ -53,7 +53,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         os.makedirs(pointcloud_res, exist_ok=True)
 
     start = time()
-    src_result_transforms = os.path.join(conf.data.src_res, f'{conf.data.res_prefix}_quadtree_transforms.pickle')
+    src_result_transforms = os.path.join(conf.data.src_res, 'quadtree_transforms.pickle')
     src_result_offset = os.path.join(conf.data.src_res, f'offset.txt')
     time0 = time()
 
