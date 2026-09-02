@@ -24,7 +24,7 @@ class AdvancedOptions(QMainWindow):
 
         # data
         # self.le_data_dest.setText(str(self.conf.data.src_res))
-        # self.le_data_suffixe.setText(str(self.conf.data.res_prefix))
+        # self.le_data_suffixe.setText(str(self.conf.data.prefix))
         self.cb_output_transformed.setChecked(self.conf.args.do_output_transformed)
         self.le_output_transformed.setText(str(self.conf.args.output_level))
         self.le_crs.setText(str(self.conf.data.crs))

@@ -583,6 +583,48 @@
        </property>
       </widget>
      </widget>
+     <widget class="QComboBox" name="cbb_split">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>0</y>
+        <width>101</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="baseSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <item>
+       <property name="text">
+        <string>no category</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>keep both</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>split</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>only ground</string>
+       </property>
+      </item>
+     </widget>
     </widget>
     <widget class="Line" name="line_7">
      <property name="geometry">

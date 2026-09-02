@@ -6,7 +6,6 @@ from time import time
 from plyfile import PlyData
 if __name__ != "__main__":
     from src.quadnode import QuadNode
-import warnings
 from src.format_conversions import convert_one_file
 
 

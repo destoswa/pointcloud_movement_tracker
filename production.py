@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 from time import time
 from process_one_file import ICP_process
 from tqdm import tqdm
+from tkinter import messagebox as mb
 from src.production_utils import preprocess_into_csv, merge_results_from_csv
 import traceback
 from omegaconf import OmegaConf
@@ -87,14 +88,29 @@ def production(conf):
 
     print("\nProducing on valid pairs of files:")
     conf.data.prefix = conf.production.prefix
-    for _, row in tqdm(df_tiles.iterrows(), total=len(df_tiles), desc="Processing"):
+
+    # Test if the resulting folder already contains something and prepare list of files accordingly
+    if len(os.listdir(os.path.dirname(df_tiles.src_res[0]))) > 0:
+        res=mb.askquestion('Not empty folder', 'The resulting folder seems to already contain folders. Do you want to resume from there? (if no, will start from scratch)')
+        if res == 'yes' :
+            conf.production.do_skip_existing = True
+        else :
+            conf.production.do_skip_existing = False
+
+    if conf.production.do_skip_existing:
+        list_rows = [row for _, row in df_tiles.iterrows() if not os.path.exists(os.path.join(row.src_res, 'config.yaml'))]
+    else:
+        list_rows = [row for _, row in df_tiles.iterrows()]
+
+    # Loop over the different files
+    for _, row in tqdm(enumerate(list_rows), total=len(list_rows), desc="Processing"):
         try:
             conf.data.src_pc1 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc1)
             conf.data.src_pc2 = os.path.join(os.path.dirname(conf.production.src_csv), row.src_pc2)
             conf.data.src_res = os.path.join(os.path.dirname(conf.production.src_csv), row.src_res)
+
+            # If only applying postprocessing on existing results or doing the full process
             if conf.production.postprocess_only:
-                # old_conf = OmegaConf.load(os.path.join(row.src_res, 'config.yaml'))
-                # OmegaConf.update(conf, 'data.res_prefix', OmegaConf.select(old_conf, 'data.res_prefix'))
                 apply_postprocessing(conf, verbose=conf.production.verbose)
             else:
                 ICP_process(conf, verbose=conf.production.verbose)
@@ -102,6 +118,7 @@ def production(conf):
             tb = traceback.format_exc()
             print(tb)
 
+    # Merge results
     if conf.production.do_merge_results:
         merge_results_from_csv(
             src_csv=conf.production.src_csv,
@@ -109,7 +126,7 @@ def production(conf):
             verbose=conf.production.verbose
             )
 
-    # save results
+    # Save results
     src_conf = os.path.join(os.path.dirname(conf.production.src_csv), 'config.yaml')
     OmegaConf.save(conf, src_conf)
 
@@ -119,7 +136,7 @@ def production(conf):
     min = int((delta_time_loop - 3600 * hours) // 60)
     sec = int(delta_time_loop - 3600 * hours - 60 * min)
     print(f"\n==== COMPLETE PROCESS DONE IN {hours}:{min}:{sec} ====\n")
-            
+
 
 if __name__ == "__main__":
     conf_prod = OmegaConf.load('./config/production.yaml')

@@ -54,6 +54,7 @@ class mainUI(QMainWindow):
         # others
         self.cb_split.clicked.connect(self._cb_split_clicked)
         self.cbb_icp_method.currentTextChanged.connect(self._change_icp_method)
+        self.cbb_split.currentTextChanged.connect(self._change_split_method)
         self.cb_no_cat.clicked.connect(self._cb_no_cat_clicked)
 
         # redirect stdout to log box
@@ -78,11 +79,11 @@ class mainUI(QMainWindow):
         self.le_epoch1.setText(str(self.conf.data.src_pc1))
         self.le_epoch2.setText(str(self.conf.data.src_pc2))
         self.le_res_dest.setText(str(self.conf.data.src_res))
-        self.le_prefix.setText(str(self.conf.data.res_prefix))
+        self.le_prefix.setText(str(self.conf.data.prefix))
         self.le_csv_file.setText(str(self.conf.production.src_csv))
         self.le_multi_prefix.setText(str(self.conf.production.prefix))
-        self.le_post_prefix.setText(str(self.conf.data.res_prefix))
-        self.le_post_file.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'results/{self.conf.data.res_prefix}_quadtree_transforms.pickle'))
+        self.le_post_prefix.setText(str(self.conf.data.prefix))
+        self.le_post_file.setText(os.path.join(os.path.dirname(self.conf.data.src_pc1), f'results/{self.conf.data.prefix}_quadtree_transforms.pickle'))
 
         # checkbox if split
         self.cb_split.setChecked(self.conf.categories.split_ground_anthropic)
@@ -105,24 +106,14 @@ class mainUI(QMainWindow):
         self.le_anthropic_points.setText(str(self.conf.categories.min_points_anthropic))
 
         # checkbox if no categories
-        self.cb_no_cat.setChecked(self.conf.categories.no_cat)
-        self._cb_no_cat_clicked()
-        self.cb_tiling.setChecked(self.conf.data.do_tiling)
+        self._change_split_method()
+        # self.cb_no_cat.setChecked(self.conf.categories.no_cat)
+        # self._cb_no_cat_clicked()
+        # self.cb_tiling.setChecked(self.conf.data.do_tiling)
 
         # outputs
         init_alignment_id = ['both', 'with', 'without'].index(self.conf.postprocessing.to_keep.initial_alignment)
         self.cbb_init_alignment.setCurrentIndex(init_alignment_id)
-
-    # def _test_value(self, test_res, object, scrollArea=None) -> bool:
-    #     if test_res:
-    #         return True
-    #     else:
-    #         self.blink_timer = Blinker(object, color_on="red", interval_ms=300, duration_ms=3000)
-    #         self.blink_timer.start()
-    #         if scrollArea != None:
-    #             scrollArea.ensureWidgetVisible(object, xMargin=10, yMargin=10)
-
-    #         return False
     
     def _write_log(self, text):
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
@@ -156,7 +147,27 @@ class mainUI(QMainWindow):
         else:
             self.cb_split.setDisabled(False)
             self.cb_no_cat.setDisabled(False)
-    
+
+    def _change_split_method(self):
+        if self.cbb_split.currentText() == "no category":
+            self.fr_global_limits.setEnabled(False)
+            self.fr_ground_limits.setEnabled(False)
+            self.fr_anthropic_limits.setEnabled(False)
+        elif self.cbb_split.currentText() == "keep both":
+            self.fr_global_limits.setEnabled(True)
+            self.fr_ground_limits.setEnabled(False)
+            self.fr_anthropic_limits.setEnabled(False)
+        elif self.cbb_split.currentText() == "split":
+            self.fr_global_limits.setEnabled(False)
+            self.fr_ground_limits.setEnabled(True)
+            self.fr_anthropic_limits.setEnabled(True)
+        elif self.cbb_split.currentText() == "only ground":
+            self.fr_global_limits.setEnabled(False)
+            self.fr_ground_limits.setEnabled(True)
+            self.fr_anthropic_limits.setEnabled(False)
+        else:
+            raise ValueError("Something went wrong with selection of splitting method!")
+
     def _open_csv_gen_form(self):
         csv_gen_form = CSVGen(self)
         # Position relative to main window's top-left corner
@@ -235,6 +246,21 @@ class mainUI(QMainWindow):
             else:
                 assert test_value(self, will_it_float(self.le_global_tile.text()), self.le_global_tile)
                 assert test_value(self, self.le_global_points.text().isnumeric(), self.le_global_points)
+
+            # splitting method
+            if self.cbb_split.currentText() == "no category":
+                pass
+            elif self.cbb_split.currentText() == "keep both":
+                assert test_value(self, will_it_float(self.le_global_tile.text()), self.le_global_tile)
+                assert test_value(self, self.le_global_points.text().isnumeric(), self.le_global_points)
+            elif self.cbb_split.currentText() == "split":
+                assert test_value(self, will_it_float(self.le_ground_tile.text()), self.le_ground_tile)
+                assert test_value(self, self.le_ground_points.text().isnumeric(), self.le_ground_points)
+                assert test_value(self, will_it_float(self.le_anthropic_tile.text()), self.le_anthropic_tile)
+                assert test_value(self, self.le_anthropic_points.text().isnumeric(), self.le_anthropic_points)
+            elif self.cbb_split.currentText() == "only ground":
+                assert test_value(self, will_it_float(self.le_ground_tile.text()), self.le_ground_tile)
+                assert test_value(self, self.le_ground_points.text().isnumeric(), self.le_ground_points)
         except Exception:
             tb = traceback.format_exc()
             print(tb)
@@ -246,29 +272,55 @@ class mainUI(QMainWindow):
         OmegaConf.update(self.conf, 'production.src_csv', self.le_csv_file.text())
         OmegaConf.update(self.conf, 'args.method', ['pointtopoint', 'pointtoplane', 'gicp', 'mix'][self.cbb_icp_method.currentIndex()])
         OmegaConf.update(self.conf, 'categories.split_ground_anthropic', self.cb_split.isChecked())
-        if self.cb_split.isChecked():
+        # if self.cb_split.isChecked():
+        #     OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_ground_tile.text()))
+        #     OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_ground_points.text()))
+        #     OmegaConf.update(self.conf, 'categories.min_tile_size_anthropic', int(self.le_anthropic_tile.text()))
+        #     OmegaConf.update(self.conf, 'categories.min_points_anthropic', int(self.le_anthropic_points.text()))
+        # else:
+        #     OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_global_tile.text()))
+        #     OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
+        OmegaConf.update(self.conf, 'postprocessing.to_keep.initial_alignment', self.cbb_init_alignment.currentText())
+        OmegaConf.update(self.conf, 'data.do_tiling', self.cb_tiling.isChecked())
+
+        # splitting method
+        if self.cbb_split.currentText() == "no category":
+            OmegaConf.update(self.conf, 'categories.no_cat', True)
+        elif self.cbb_split.currentText() == "keep both":
+            OmegaConf.update(self.conf, 'categories.no_cat', False)
+            OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_global_tile.text()))
+            OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
+        elif self.cbb_split.currentText() == "split":
+            OmegaConf.update(self.conf, 'categories.no_cat', False)
             OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_ground_tile.text()))
             OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_ground_points.text()))
             OmegaConf.update(self.conf, 'categories.min_tile_size_anthropic', int(self.le_anthropic_tile.text()))
             OmegaConf.update(self.conf, 'categories.min_points_anthropic', int(self.le_anthropic_points.text()))
-        else:
-            OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_global_tile.text()))
-            OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_global_points.text()))
-        OmegaConf.update(self.conf, 'postprocessing.to_keep.initial_alignment', self.cbb_init_alignment.currentText())
-        OmegaConf.update(self.conf, 'data.do_tiling', self.cb_tiling.isChecked())
+        elif self.cbb_split.currentText() == "only ground":
+            OmegaConf.update(self.conf, 'categories.no_cat', False)
+            OmegaConf.update(self.conf, 'categories.min_tile_size_ground', int(self.le_ground_tile.text()))
+            OmegaConf.update(self.conf, 'categories.min_points_ground', int(self.le_ground_points.text()))
+            OmegaConf.update(self.conf, 'categories.cat_anthopric', [])
 
         self.btn_run_process.setEnabled(False)
+
+        # Select which process to run depending on the mode
         if self.mode == 'single':
+            OmegaConf.update(self.conf, 'data.prefix', self.le_prefix.text())
             self.worker = WorkerThread(ICP_process, self.conf, self.conf.args.verbose)
         elif self.mode == 'multiple':
+            OmegaConf.update(self.conf, 'production.prefix', self.le_multi_prefix.text())
             OmegaConf.update(self.conf, 'preprocessing.do_preprocessing', False)
             self.worker = WorkerThread(production, self.conf)
         elif self.mode == 'postprocessing':
             ext_file = os.path.splitext(self.le_post_file.text())[1]
             if ext_file.lower() in ['.pickle', '.pkl']:
+                OmegaConf.update(self.conf, 'data.prefix', self.le_post_prefix.text())
                 self.conf.postprocessing.src_transforms = self.le_post_file.text()
+                self.conf.production.postprocess_only = False
                 self.worker = WorkerThread(run_postprocessing, self.conf)
             elif ext_file.lower() == '.csv':
+                OmegaConf.update(self.conf, 'production.prefix', self.le_post_prefix.text())
                 self.conf.production.postprocess_only = True
                 self.conf.src_csv = self.le_post_file.text()
                 self.worker = WorkerThread(production, self.conf)

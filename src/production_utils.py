@@ -158,6 +158,12 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
             for key, f in unmatched2:
                 print(f"  [{key}] {f}")
 
+    # ==== TEMP ==== 
+    from time import sleep
+    sleep(3)
+    # raise ValueError("test")
+    # ==============
+
 
 def merge_gpkg(list_paths, output_path, crs="EPSG:2056", verbose=False):
     """

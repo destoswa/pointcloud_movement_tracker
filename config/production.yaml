@@ -2,6 +2,7 @@ production:
   src_csv: default   # path to CSV pairing fil
   do_merge_results: True
   postprocess_only: True
+  do_skip_existing: True
   prefix: test2
   verbose: False
 preprocessing:

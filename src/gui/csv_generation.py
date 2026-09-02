@@ -1,10 +1,36 @@
 import os
 from PyQt6.QtWidgets import QMainWindow, QFileDialog
 from PyQt6.uic import loadUi
+from PyQt6.QtCore import QTimer
 from omegaconf import OmegaConf
-
 from src.production_utils import preprocess_into_csv
 from src.gui.gui_utils import *
+
+
+class DotAnimator:
+    def __init__(self, label, base_text="Processing", interval_ms=400):
+        self.label = label
+        self.base_text = base_text
+        self.dots = 0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._tick)
+        self.timer.setInterval(interval_ms)
+
+    def _tick(self):
+        self.dots = (self.dots + 1) % 4  # cycles 0,1,2,3 dots
+        self.label.setText(self.base_text + "." * self.dots)
+
+    def start(self, color="orange"):
+        self.dots = 0
+        self.label.setStyleSheet(f"color: {color};")
+        self.label.setText(self.base_text)
+        self.timer.start()
+
+    def stop(self, final_text="Done!", color="green"):
+        self.timer.stop()
+        self.label.setStyleSheet(f"color: {color};")
+        self.label.setText(final_text)
+
 
 class CSVGen(QMainWindow):
     def __init__(self, parent=None):
@@ -39,6 +65,7 @@ class CSVGen(QMainWindow):
 
         self.le_pattern.setText(self.conf.preprocessing.pattern)
 
+
     def _generate_csv(self):
         # Test values
         assert test_value(self, is_a_path(self.le_epoch1.text()) and self.le_epoch1.text() != "", self.le_epoch1)
@@ -52,24 +79,39 @@ class CSVGen(QMainWindow):
         OmegaConf.update(self.conf, 'preprocessing.src_folder_old', self.le_epoch1.text())
         OmegaConf.update(self.conf, 'preprocessing.src_folder_new', self.le_epoch2.text())
         OmegaConf.update(self.conf, 'preprocessing.src_res', self.le_res.text())
-        OmegaConf.update(self.conf, 'production.src_csv', os.path.join(self.le_csv_dest.text(), self.le_filename.text()))
+        csv_loc = os.path.dirname(self.le_epoch1.text()) if self.le_csv_dest.text().lower() == 'default' else self.le_csv_dest.text()
+        OmegaConf.update(self.conf, 'production.src_csv', os.path.join(csv_loc, f"{self.le_filename.text()}.csv"))
         OmegaConf.update(self.conf, 'preprocessing.pattern', self.le_pattern.text())
 
         # Run generation
-        preprocess_into_csv(
-            self.conf.preprocessing.src_folder_old, 
-            self.conf.preprocessing.src_folder_new, 
-            self.conf.preprocessing.src_res,
-            self.conf.production.src_csv, 
-            self.conf.preprocessing.pattern, 
-            verbose=True,
-            )
+        if not hasattr(self, "dot_animator"):
+            self.dot_animator = DotAnimator(self.lbl_state, base_text="Processing")
+        self.dot_animator.start()
+        self.worker_had_error = False
+
+        try:
+            self.worker = WorkerThread(
+                preprocess_into_csv,
+                self.conf.preprocessing.src_folder_old, 
+                self.conf.preprocessing.src_folder_new, 
+                self.conf.preprocessing.src_res,
+                self.conf.production.src_csv, 
+                self.conf.preprocessing.pattern, 
+                verbose=True,
+                )
+        
+            self.worker.finished.connect(self._on_worker_finished)
+            self.worker.error_occurred.connect(self._on_worker_error)
+            self.worker.start()
+        except Exception as e:
+            self.dot_animator.stop("Error!", color='red')
 
         self.parent().le_csv_file.setText(self.conf.production.src_csv)
+    def _on_worker_finished(self):
+        if not self.worker_had_error:
+            self.dot_animator.stop("Done!")
 
-    # def _browse_folder(self, line_edit):
-    #     path = QFileDialog.getExistingDirectory(
-    #         self, "Select folder", ""
-    #     )
-    #     if path:
-    #         line_edit.setText(path)
+    def _on_worker_error(self, traceback_str):
+        self.worker_had_error = True
+        self.dot_animator.stop("Error!", color='red')
+        print("ERROR:\n" + traceback_str)

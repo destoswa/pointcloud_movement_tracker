@@ -17,7 +17,6 @@ from src.icp_utils import \
     trim_branch, \
     prepare_files, \
     get_nodes_of_level
-from src.format_conversions import convert_one_file
 from src.production_utils import merge_results_from_list
 
 
@@ -252,15 +251,6 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             mode=mode,
             )
 
-    # # --- TEMP ---
-    # src_ground = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_GROUND.pickle")
-    # src_anthropic = os.path.join(os.path.dirname(conf.data.src_res), "TEMP_ANTHROPIC.pickle")
-    # with open(src_ground, 'wb')   as f:
-    #     pickle.dump(roots['ground'], f)
-    # with open(src_anthropic, 'wb') as f:
-    #     pickle.dump(roots['anthropic'], f)
-    # # ---
-
     # replace nodes in ground by leaves in buildings
     if conf.categories.split_ground_anthropic:
         anthropic_nodes = node_to_list(roots['anthropic'])
@@ -327,7 +317,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            prefix=conf.data.res_prefix, 
+            prefix=conf.data.prefix, 
             suffix='w_A0', 
             crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
@@ -348,7 +338,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             keep_layers=keep_layers,
             absurd_dist_local=conf.postprocessing.absurd_dist_local,
             absurd_dist_global=conf.postprocessing.absurd_dist_global, 
-            prefix=conf.data.res_prefix, 
+            prefix=conf.data.prefix, 
             suffix='wo_A0', 
             crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
@@ -518,6 +508,21 @@ def one_file(conf, verbose):
     else:
         ICP_process(conf, None, verbose)
 
+
 if __name__ == "__main__": 
-    conf = OmegaConf.load("./config/one_file.yaml")
-    one_file(conf, conf.args.verbose)
+    src_res_folder = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\per_tile"
+    src_final_res = os.path.join(os.path.dirname(src_res_folder), "merged_results")
+    os.makedirs(src_final_res, exist_ok=True)
+    conf = OmegaConf.load('./config/one_file.yaml')
+    lst_tiles_to_process = [os.path.join(src_res_folder, x) for x in os.listdir(src_res_folder)]
+    merge_results_from_list(
+        lst_result_paths=lst_tiles_to_process,
+        src_res_merged=src_final_res,
+        crs=conf.data.crs,
+        verbose=conf.args.verbose,
+        )
+
+
+
+    # conf = OmegaConf.load("./config/one_file.yaml")
+    # one_file(conf, conf.args.verbose)
