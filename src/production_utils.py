@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import re
 from pathlib import Path
 import csv
@@ -131,6 +132,7 @@ def preprocess_into_csv(src_folder_old, src_folder_new, src_res, output_csv, pat
     # --------------------------------
     src_res = os.path.join(os.path.dirname(src_folder_old), 'results') if src_res.lower() == 'default' else src_res
     output_csv = os.path.join(os.path.dirname(src_folder_old), 'files_matching.csv') if output_csv.lower() == 'default' else output_csv
+    os.makedirs(src_res, exist_ok=True)
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
@@ -232,27 +234,116 @@ def merge_results_from_csv(src_csv, prefix, crs="EPSG:2056", verbose=True):
         merge_gpkg(list_of_files, output_path, crs=crs, verbose=verbose)
 
 
+# def merge_results_from_list(lst_result_paths, src_res_merged, crs="EPSG:2056", verbose=True):
+#     res = []
+#     os.makedirs(src_res_merged, exist_ok=True)
+
+#     for src_res in lst_result_paths:
+#         res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
+
+#     df_res = pd.DataFrame(res)
+#     if verbose:
+#         print(f"Merging {len(df_res)} files:")
+#     for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res.columns), desc="Merging", disable=verbose==False):
+#         list_of_files = [f for f in series.to_list() if f]
+#         if not list_of_files:
+#             continue
+#         merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"
+#         output_path = os.path.join(src_res_merged, merged_file_name)
+#         merge_gpkg(list_of_files, output_path, crs=crs, verbose=verbose)
+
 def merge_results_from_list(lst_result_paths, src_res_merged, crs="EPSG:2056", verbose=True):
-    res = []
+    # def sanitize_gdf(gdf):
+    #     """Unwrap single-element lists/arrays to scalars in all columns."""
+    #     for col in gdf.columns:
+    #         if col == 'geometry':
+    #             continue
+    #         def unwrap(val):
+    #             if isinstance(val, (list, np.ndarray)):
+    #                 if len(val) == 1:
+    #                     return val[0]
+    #                 elif len(val) == 0:
+    #                     return None
+    #             return val
+    #         gdf[col] = gdf[col].apply(unwrap)
+    #     return gdf
+    def sanitize_gdf(gdf):
+        """Unwrap single-element lists/arrays to scalars in all columns."""
+        for col in gdf.columns:
+            if col == 'geometry':
+                continue
+            try:
+                # Try to convert the whole column at once first
+                gdf[col] = pd.to_numeric(gdf[col])
+                
+                # If still contains lists/arrays, unwrap element by element
+                if gdf[col].apply(lambda x: isinstance(x, (list, np.ndarray, tuple))).any():
+                    gdf[col] = gdf[col].apply(lambda x: 
+                        float(x[0]) if isinstance(x, (list, np.ndarray, tuple)) and len(x) == 1
+                        else float(x) if isinstance(x, (list, np.ndarray, tuple)) and len(x) == 0
+                        else x
+                    )
+            except Exception:
+                pass
+        return gdf
+
     os.makedirs(src_res_merged, exist_ok=True)
 
+    # Build df_res: rows = parts, columns = gpkg files
+    res = []
     for src_res in lst_result_paths:
-        res.append([os.path.join(src_res, x) for x in os.listdir(src_res) if  x.endswith('gpkg')])
+        res.append({
+            os.path.basename(x): os.path.join(src_res, x) 
+            for x in os.listdir(src_res) 
+            if x.endswith('.gpkg')
+        })
+    df_res = pd.DataFrame(res)  # shape: (n_parts, n_gpkg_files)
 
-    df_res = pd.DataFrame(res)
+    # Clean up existing merged files before starting
+    for gpkg_name in df_res.columns:
+        output_path = os.path.join(src_res_merged, gpkg_name.replace('.gpkg', '_MERGED.gpkg'))
+        if os.path.exists(output_path):
+            os.remove(output_path)
+
     if verbose:
-        print(f"Merging {len(df_res)} files:")
-    for _, (_, series) in tqdm(enumerate(df_res.items()), total=len(df_res.columns), desc="Merging", disable=verbose==False):
-        list_of_files = [f for f in series.to_list() if f]
-        if not list_of_files:
-            continue
-        merged_file_name = os.path.basename(list_of_files[0]).split('.gpkg')[0] + "_MERGED.gpkg"
-        output_path = os.path.join(src_res_merged, merged_file_name)
-        merge_gpkg(list_of_files, output_path, crs=crs, verbose=verbose)
+        print(f"Merging {len(df_res)} parts × {len(df_res.columns)} files:")
 
+    # Loop on parts (rows) for tqdm
+    for _, row in tqdm(df_res.iterrows(), total=len(df_res), desc="Merging"):
+        for gpkg_name, path in row.items():
+            if not path or pd.isna(path):
+                continue
+
+            output_path = os.path.join(src_res_merged, gpkg_name.replace('.gpkg', '_MERGED.gpkg'))
+
+            # Read all layers and write immediately — no accumulation in RAM
+            try:
+                layer_names = gpd.list_layers(path)["name"].tolist()
+            except Exception as e:
+                print(f"Warning: could not list layers in {path}: {e}")
+                continue
+
+            for layer_name in layer_names:
+                try:
+                    gdf = gpd.read_file(path, layer=layer_name)
+                    # gdf = sanitize_gdf(gdf)
+                    gdf.to_file(output_path, layer=layer_name, driver="GPKG", mode='a')
+                except Exception as e:
+                    print(f"Warning: could not process layer '{layer_name}' from {path}: {e}")
+
+    if verbose:
+        print(f"Done. Results saved to {src_res_merged}")
 
 if __name__ == "__main__":
     pass
+    src_per_tile = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\east_7m\per_tile"
+    src_merged = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\east_7m\merged"
+    lst_paths = [os.path.join(src_per_tile, x) for x in os.listdir(src_per_tile)]
+    merge_results_from_list(
+        lst_result_paths=lst_paths,
+        src_res_merged=src_merged,
+    )
+
     # verbose=False
     # conf_prod = OmegaConf.load('./config/production.yaml')
     # conf_one_tile = OmegaConf.load('./config/one_file.yaml')

@@ -6,6 +6,7 @@ class QuadNode:
     def __init__(self, bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, grid_pos, parent=None, is_anthropic=False):
         self.bbox = bbox
         # self.id = int(np.sum(np.array(self.bbox['min_bound']) * np.array([10**3, 10**6, 10**9])) + level)
+        self.grid_pos = grid_pos
         self.id = int(np.sum(np.array(grid_pos) * np.array([10**3, 10**6])) + level)
         self.center = center
         self.indices_src = indices_src

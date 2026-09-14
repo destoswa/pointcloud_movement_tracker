@@ -1,14 +1,14 @@
 production:
   src_csv: default   # path to CSV pairing fil
   do_merge_results: True
-  postprocess_only: True
-  do_skip_existing: True
-  prefix: test2
+  postprocess_only: False
+  do_skip_existing: False
+  do_preprocessing: True   
+  prefix: test
   verbose: False
-preprocessing:
-  do_preprocessing: True                    # whether to run preprocessing to auto-pair old/new files
-  src_folder_old: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_36_production\old   # path to folder containing the older point clouds
-  src_folder_new: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_36_production\new   # path to folder containing the newer point clouds
+preprocessing:                 # whether to run preprocessing to auto-pair old/new files
+  src_folder_old: D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\data\test_corr_anthropic\production\old   # path to folder containing the older point clouds
+  src_folder_new: D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\data\test_corr_anthropic\production\new   # path to folder containing the newer point clouds
   src_res: default
   pattern: "*_*_(dddd_dddd/dddd-dddd)_*"    # place here a regular expression (regex) that identify the common part of each pair
   verbose: True                             # print preprocessing progress and matched pairs

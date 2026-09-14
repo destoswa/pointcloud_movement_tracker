@@ -73,7 +73,7 @@ def production(conf):
         conf.production.src_csv = os.path.join(os.path.dirname(conf.preprocessing.src_folder_old), 'list_tiles.csv')
 
     # === PREPROCESSING ===
-    if conf.preprocessing.do_preprocessing:
+    if conf.production.do_preprocessing:
         preprocess_into_csv(
             conf.preprocessing.src_folder_old, 
             conf.preprocessing.src_folder_new, 
@@ -144,3 +144,4 @@ if __name__ == "__main__":
     conf = OmegaConf.merge(conf_prod, conf_one_tile)
 
     production(conf)
+

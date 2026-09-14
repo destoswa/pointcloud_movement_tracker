@@ -36,10 +36,12 @@ def compute_translation(node):
         direction_local = ((diff_local[0:2]) / norm2d_local).squeeze(-1) if norm2d_local > 0 else np.zeros((2,1))
         node.metrics['pos_i'] = center[:3].squeeze(-1)
         node.metrics['pos_f'] = translated[:3].squeeze(-1)
-        node.metrics['translation_x'] = direction[0]
-        node.metrics['translation_y'] = direction[1]
-        node.metrics['translation_x_local'] = direction_local[0]
-        node.metrics['translation_y_local'] = direction_local[1]
+        direction = direction.reshape((2,1))
+        direction_local = direction_local.reshape((2,1))
+        node.metrics['translation_x'] = float(direction[0,0])
+        node.metrics['translation_y'] = float(direction[1,0])
+        node.metrics['translation_x_local'] = float(direction_local[0,0])
+        node.metrics['translation_y_local'] = float(direction_local[1,0])
         node.metrics['dx'] = float(diff_global[0][0])
         node.metrics['dy'] = float(diff_global[1][0])
         node.metrics['dz'] = float(diff_global[2][0])

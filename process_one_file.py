@@ -67,9 +67,9 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     if verbose:
         print("time to load: ", time() - time0)
     
-    # Remove translated files
-    for file_src in files_to_remove:
-        os.remove(file_src)
+    # # Remove temp laz files
+    # for file_src in files_to_remove:
+    #     os.remove(file_src)
 
 
     if bbox_offset == None:
@@ -510,19 +510,23 @@ def one_file(conf, verbose):
 
 
 if __name__ == "__main__": 
-    src_res_folder = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\per_tile"
-    src_final_res = os.path.join(os.path.dirname(src_res_folder), "merged_results")
-    os.makedirs(src_final_res, exist_ok=True)
-    conf = OmegaConf.load('./config/one_file.yaml')
-    lst_tiles_to_process = [os.path.join(src_res_folder, x) for x in os.listdir(src_res_folder)]
-    merge_results_from_list(
-        lst_result_paths=lst_tiles_to_process,
-        src_res_merged=src_final_res,
-        crs=conf.data.crs,
-        verbose=conf.args.verbose,
-        )
+    # src_res_folder = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\per_tile"
+    # src_final_res = os.path.join(os.path.dirname(src_res_folder), "merged_results")
+    # os.makedirs(src_final_res, exist_ok=True)
+    # conf = OmegaConf.load('./config/one_file.yaml')
+    # lst_tiles_to_process = [os.path.join(src_res_folder, x) for x in os.listdir(src_res_folder)]
+    # merge_results_from_list(
+    #     lst_result_paths=lst_tiles_to_process,
+    #     src_res_merged=src_final_res,
+    #     crs=conf.data.crs,
+    #     verbose=conf.args.verbose,
+    #     )
 
+    # import open3d as o3d
 
+    # print(o3d.__version__)
+    # print(hasattr(o3d.pipelines.registration, "registration_ndt"))
+    # print(dir(o3d.pipelines.registration))
 
-    # conf = OmegaConf.load("./config/one_file.yaml")
-    # one_file(conf, conf.args.verbose)
+    conf = OmegaConf.load("./config/one_file.yaml")
+    one_file(conf, conf.args.verbose)
