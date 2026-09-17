@@ -8,8 +8,8 @@ from math import atan2, asin, acos, degrees
 
 
 def remove_A0(node, A0_inv):
-    node.global_transform = np.linalg.matmul(node.global_transform, A0_inv)
-    # node.global_transform = np.linalg.matmul(node.global_transform, np.eye(4))
+    # node.global_transform = np.linalg.matmul(node.global_transform, A0_inv)
+    node.global_transform = node.global_transform @ A0_inv
     for child in node.children:
         if child != None:
             remove_A0(child, A0_inv)
@@ -22,7 +22,7 @@ def compute_translation(node):
     if node.anthropic_state <= 0:
         # Compute translation:
         center = np.vstack([node.center.reshape((3,1)), np.array([1])])
-        translated = np.linalg.matmul(node.global_transform, center)
+        translated = node.global_transform @ center
         translated_before_local = np.linalg.inv(node.local_transform) @ node.global_transform @ center
         diff_before_local = translated_before_local - center
         diff_global = translated - center

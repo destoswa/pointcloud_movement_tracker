@@ -27,6 +27,8 @@ class QuadNode:
 
     def __len__(self):
         counter = len(self.children)
+        if self.level == 0:
+            counter += 1
         for child in self.children:
             if child != None:
                 counter += len(child)

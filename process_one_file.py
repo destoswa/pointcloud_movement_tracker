@@ -61,8 +61,8 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     list_ground = [conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground
     list_cat_to_keep = [x for row in [list_anthropic, list_ground] for x in row]
     tiles_original = {
-        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
-        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
+        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
+        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
     }
     if verbose:
         print("time to load: ", time() - time0)
@@ -106,7 +106,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     time0 = time()
 
     # set split to False if no_cat
-    conf.categories.split_ground_anthropic = bool(conf.categories.split_ground_anthropic * (conf.categories.no_cat==False))
+    conf.categories.split_ground_anthropic = bool(conf.categories.split_ground_anthropic * (conf.categories.use_category==True))
 
     # Process categories
     if conf.categories.split_ground_anthropic:
@@ -276,6 +276,8 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
 
     # do not postprocess if not quadtree
     if len(roots['ground']) == 0:
+        if verbose:
+            print("No root. Leaving the tile")
         return -1
 
     # save final root

@@ -3,8 +3,8 @@ data:
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\full_22_25\Taroko_ToTo_2025_1m.laz
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\Taroko_ToTo_2022_cropped_on_2025_small_subsampled_2m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_trD:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_34_huge_translation\test_real_sample\swisssurface3d_2018_2589-1169_2056_5728.lazacking_dev\data\test_33_tiling\Taroko_ToTo_2025_1m_small_subsampled_2m.laz
-  src_pc1: D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\data\test_corr_anthropic\2588_1169\2588_1169.las
-  src_pc2: D:\GitHubProjects\Terranum_repo\pointcloud_movement_tracker\data\test_corr_anthropic\2588_1169\swisssurface3d_2024_2588-1169_2056_5728.copc.laz
+  src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_37_wo_A0_corrections\test_no_rot_A0\swisssurface3d_2018_2589-1169_2056_5728.laz
+  src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_37_wo_A0_corrections\test_no_rot_A0\swisssurface3d_2024_2589-1169_2056_5728.laz
   # src_res: D:\Terranum_SD\99_Data\Taiwan_point_cloud\22-25
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
@@ -28,13 +28,13 @@ args:
   do_postprocessing: True       # whether to run postprocessing after ICP
   verbose: True                 # print progress and timing information
 categories:
-  no_cat: False
-  split_ground_anthropic: True # Whether to process separataly (True) or not (False) the ground and the anthropic
+  use_category: False
+  split_ground_anthropic: False # Whether to process separataly (True) or not (False) the ground and the anthropic
   cat_ground: 2                 # LAS classification code for ground points — single value or list
   cat_anthropic: [6, 17, 26, 27]  # LAS classification code for anthropic points — single value or list
-  min_tile_size_ground: 7     # minimum tile size (m) below which ground quadtree stops subdividing
-  min_tile_size_anthropic: 7  # minimum tile size (m) below which anthropic quadtree stops subdividing
-  min_points_ground: 500      # minimum number of points in a tile to allow further subdivision (ground)
+  min_tile_size_ground: 150     # minimum tile size (m) below which ground quadtree stops subdividing
+  min_tile_size_anthropic: 150  # minimum tile size (m) below which anthropic quadtree stops subdividing
+  min_points_ground: 50      # minimum number of points in a tile to allow further subdivision (ground)
   min_points_anthropic: 50      # minimum number of points in a tile to allow further subdivision (anthropic)
 postprocessing:
   src_transforms: default       # path to saved transforms pickle file (default = auto-detect from src_res)

@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 from time import time
 from process_one_file import ICP_process
 from tqdm import tqdm
+import tkinter as tk
 from tkinter import messagebox as mb
 from src.production_utils import preprocess_into_csv, merge_results_from_csv
 import traceback
@@ -89,9 +90,14 @@ def production(conf):
     print("\nProducing on valid pairs of files:")
     conf.data.prefix = conf.production.prefix
 
+    os.makedirs(os.path.dirname(df_tiles.src_res[0]), exist_ok=True)
+    
     # Test if the resulting folder already contains something and prepare list of files accordingly
     if len(os.listdir(os.path.dirname(df_tiles.src_res[0]))) > 0:
+        root = tk.Tk()
+        root.withdraw() 
         res=mb.askquestion('Not empty folder', 'The resulting folder seems to already contain folders. Do you want to resume from there? (if no, will start from scratch)')
+        root.destroy()
         if res == 'yes' :
             conf.production.do_skip_existing = True
         else :
