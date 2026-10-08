@@ -588,7 +588,7 @@
        <rect>
         <x>160</x>
         <y>0</y>
-        <width>101</width>
+        <width>151</width>
         <height>20</height>
        </rect>
       </property>
@@ -606,7 +606,7 @@
       </property>
       <item>
        <property name="text">
-        <string>no category</string>
+        <string>no category (from DEM)</string>
        </property>
       </item>
       <item>

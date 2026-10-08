@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 from time import time
 from process_one_file import ICP_process
 from tqdm import tqdm
+import tkinter as tk
 from tkinter import messagebox as mb
 from src.production_utils import preprocess_into_csv, merge_results_from_csv
 import traceback
@@ -73,7 +74,7 @@ def production(conf):
         conf.production.src_csv = os.path.join(os.path.dirname(conf.preprocessing.src_folder_old), 'list_tiles.csv')
 
     # === PREPROCESSING ===
-    if conf.preprocessing.do_preprocessing:
+    if conf.production.do_preprocessing:
         preprocess_into_csv(
             conf.preprocessing.src_folder_old, 
             conf.preprocessing.src_folder_new, 
@@ -89,9 +90,14 @@ def production(conf):
     print("\nProducing on valid pairs of files:")
     conf.data.prefix = conf.production.prefix
 
+    os.makedirs(os.path.dirname(df_tiles.src_res[0]), exist_ok=True)
+    
     # Test if the resulting folder already contains something and prepare list of files accordingly
     if len(os.listdir(os.path.dirname(df_tiles.src_res[0]))) > 0:
+        root = tk.Tk()
+        root.withdraw() 
         res=mb.askquestion('Not empty folder', 'The resulting folder seems to already contain folders. Do you want to resume from there? (if no, will start from scratch)')
+        root.destroy()
         if res == 'yes' :
             conf.production.do_skip_existing = True
         else :
@@ -144,3 +150,4 @@ if __name__ == "__main__":
     conf = OmegaConf.merge(conf_prod, conf_one_tile)
 
     production(conf)
+

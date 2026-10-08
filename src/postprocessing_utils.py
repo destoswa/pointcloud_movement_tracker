@@ -8,8 +8,8 @@ from math import atan2, asin, acos, degrees
 
 
 def remove_A0(node, A0_inv):
-    node.global_transform = np.linalg.matmul(node.global_transform, A0_inv)
-    # node.global_transform = np.linalg.matmul(node.global_transform, np.eye(4))
+    # node.global_transform = np.linalg.matmul(node.global_transform, A0_inv)
+    node.global_transform = node.global_transform @ A0_inv
     for child in node.children:
         if child != None:
             remove_A0(child, A0_inv)
@@ -22,7 +22,7 @@ def compute_translation(node):
     if node.anthropic_state <= 0:
         # Compute translation:
         center = np.vstack([node.center.reshape((3,1)), np.array([1])])
-        translated = np.linalg.matmul(node.global_transform, center)
+        translated = node.global_transform @ center
         translated_before_local = np.linalg.inv(node.local_transform) @ node.global_transform @ center
         diff_before_local = translated_before_local - center
         diff_global = translated - center
@@ -36,10 +36,12 @@ def compute_translation(node):
         direction_local = ((diff_local[0:2]) / norm2d_local).squeeze(-1) if norm2d_local > 0 else np.zeros((2,1))
         node.metrics['pos_i'] = center[:3].squeeze(-1)
         node.metrics['pos_f'] = translated[:3].squeeze(-1)
-        node.metrics['translation_x'] = direction[0]
-        node.metrics['translation_y'] = direction[1]
-        node.metrics['translation_x_local'] = direction_local[0]
-        node.metrics['translation_y_local'] = direction_local[1]
+        direction = direction.reshape((2,1))
+        direction_local = direction_local.reshape((2,1))
+        node.metrics['translation_x'] = float(direction[0,0])
+        node.metrics['translation_y'] = float(direction[1,0])
+        node.metrics['translation_x_local'] = float(direction_local[0,0])
+        node.metrics['translation_y_local'] = float(direction_local[1,0])
         node.metrics['dx'] = float(diff_global[0][0])
         node.metrics['dy'] = float(diff_global[1][0])
         node.metrics['dz'] = float(diff_global[2][0])

@@ -42,8 +42,6 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
     
     if verbose:
         print("Time to detect absurds: ", time() - time0)
-
-    if verbose:
         print(f"Number of absurd values: {counter} ({np.round(counter/original_len*100, 2)}%)")
 
     # Gather data for GPKG

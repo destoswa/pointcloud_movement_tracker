@@ -61,15 +61,15 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     list_ground = [conf.categories.cat_ground] if isinstance(conf.categories.cat_ground, int) else conf.categories.cat_ground
     list_cat_to_keep = [x for row in [list_anthropic, list_ground] for x in row]
     tiles_original = {
-        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
-        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.no_cat),
+        'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
+        'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
     }
     if verbose:
         print("time to load: ", time() - time0)
     
-    # Remove translated files
-    for file_src in files_to_remove:
-        os.remove(file_src)
+    # # Remove temp laz files
+    # for file_src in files_to_remove:
+    #     os.remove(file_src)
 
 
     if bbox_offset == None:
@@ -106,7 +106,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
     time0 = time()
 
     # set split to False if no_cat
-    conf.categories.split_ground_anthropic = bool(conf.categories.split_ground_anthropic * (conf.categories.no_cat==False))
+    conf.categories.split_ground_anthropic = bool(conf.categories.split_ground_anthropic * (conf.categories.use_category==True))
 
     # Process categories
     if conf.categories.split_ground_anthropic:
@@ -276,6 +276,8 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
 
     # do not postprocess if not quadtree
     if len(roots['ground']) == 0:
+        if verbose:
+            print("No root. Leaving the tile")
         return -1
 
     # save final root
@@ -510,19 +512,23 @@ def one_file(conf, verbose):
 
 
 if __name__ == "__main__": 
-    src_res_folder = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\per_tile"
-    src_final_res = os.path.join(os.path.dirname(src_res_folder), "merged_results")
-    os.makedirs(src_final_res, exist_ok=True)
-    conf = OmegaConf.load('./config/one_file.yaml')
-    lst_tiles_to_process = [os.path.join(src_res_folder, x) for x in os.listdir(src_res_folder)]
-    merge_results_from_list(
-        lst_result_paths=lst_tiles_to_process,
-        src_res_merged=src_final_res,
-        crs=conf.data.crs,
-        verbose=conf.args.verbose,
-        )
+    # src_res_folder = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\per_tile"
+    # src_final_res = os.path.join(os.path.dirname(src_res_folder), "merged_results")
+    # os.makedirs(src_final_res, exist_ok=True)
+    # conf = OmegaConf.load('./config/one_file.yaml')
+    # lst_tiles_to_process = [os.path.join(src_res_folder, x) for x in os.listdir(src_res_folder)]
+    # merge_results_from_list(
+    #     lst_result_paths=lst_tiles_to_process,
+    #     src_res_merged=src_final_res,
+    #     crs=conf.data.crs,
+    #     verbose=conf.args.verbose,
+    #     )
 
+    # import open3d as o3d
 
+    # print(o3d.__version__)
+    # print(hasattr(o3d.pipelines.registration, "registration_ndt"))
+    # print(dir(o3d.pipelines.registration))
 
-    # conf = OmegaConf.load("./config/one_file.yaml")
-    # one_file(conf, conf.args.verbose)
+    conf = OmegaConf.load("./config/one_file.yaml")
+    one_file(conf, conf.args.verbose)

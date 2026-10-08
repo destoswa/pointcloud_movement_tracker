@@ -36,17 +36,17 @@ def prepare_files(src_pc1, src_pc2, verbose=True):
     return src_pc_out[0], src_pc_out[1], temp_files
 
 
-def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, keep_all=False):
+def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, use_cat=False):
     ext = os.path.splitext(src_pc)[1].lower()
     if ext in ['.las', '.laz']:
         pc = laspy.read(src_pc)
-        if keep_all:
-            mask = np.ones(len(pc), dtype=np.bool)
-        else:
+        if use_cat:
             classification = getattr(pc, cat_field)
             mask = np.zeros(len(pc), dtype=np.bool_)
             for val in list_cat_to_keep:
                 mask[classification == val] = True
+        else:
+            mask = np.ones(len(pc), dtype=np.bool)
         pc.points = pc.points[mask]
     else:
         raise ValueError(f"The pointcloud is not of type LAS or LAZ: {src_pc}")
