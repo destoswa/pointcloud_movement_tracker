@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>731</width>
+    <width>730</width>
     <height>938</height>
    </rect>
   </property>
@@ -205,23 +205,10 @@
        <string>ICP method :</string>
       </property>
      </widget>
-     <widget class="QCheckBox" name="cb_no_cat">
-      <property name="geometry">
-       <rect>
-        <x>190</x>
-        <y>0</y>
-        <width>151</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>No category</string>
-      </property>
-     </widget>
      <widget class="QCheckBox" name="cb_tiling">
       <property name="geometry">
        <rect>
-        <x>330</x>
+        <x>270</x>
         <y>0</y>
         <width>151</width>
         <height>20</height>
@@ -247,19 +234,6 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <widget class="QCheckBox" name="cb_split">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>151</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Split ground / anthropic</string>
-      </property>
-     </widget>
      <widget class="Line" name="line_8">
       <property name="geometry">
        <rect>
@@ -586,7 +560,7 @@
      <widget class="QComboBox" name="cbb_split">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>30</x>
         <y>0</y>
         <width>151</width>
         <height>20</height>
@@ -624,6 +598,20 @@
         <string>only ground</string>
        </property>
       </item>
+     </widget>
+     <widget class="QLabel" name="label_27">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>0</y>
+        <width>431</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>* &quot;no category&quot; will process all the points while &quot;keep both&quot; will still remove points that
+    are of neither category.</string>
+      </property>
      </widget>
     </widget>
     <widget class="Line" name="line_7">
@@ -1345,7 +1333,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>731</width>
+     <width>730</width>
      <height>22</height>
     </rect>
    </property>

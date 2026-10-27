@@ -65,7 +65,7 @@ def build_vrt_and_cog(
 
 if __name__ == "__main__":
     build_vrt_and_cog(
-        input_dir=r"F:\DEM\2015_Vaud\tiles",
-        vrt_path=r"F:\DEM\2015_Vaud\DEM_2015_Vaud.vrt",
-        cog_path=r"F:\DEM\2015_Vaud\DEM_2015_Vaud_cog.tif",
+        input_dir=r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_41_cog_wo_holes\tifs",
+        vrt_path=r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_41_cog_wo_holes\test.vrt",
+        cog_path=r"D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_41_cog_wo_holes\test_cog.tif",
     )

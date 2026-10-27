@@ -13,6 +13,8 @@ from src.postprocessing_utils import \
     export_points_and_bboxes, \
     remove_A0, find_node
 
+from src.coherence import compute_spatial_coherence, compute_magnitude_zscore, compute_rotation_angles, compute_confidence
+
 
 def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absurd_dist_local=5, absurd_dist_global=20, suffix='', prefix='', crs="EPSG:2056", verbose=False):
     # prepare paths
@@ -31,7 +33,34 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
     time0 = time()
     compute_translation(root)
     compute_rotation(root)
-    
+
+    # Compute coherence indexes
+    translation_x = [node.metrics['translation_x'] for node in list_nodes]
+    translation_y = [node.metrics['translation_y'] for node in list_nodes]
+    displacement = [node.metrics['Disp3D'] for node in list_nodes]
+    planarity = [float(node.planarity) for node in list_nodes]
+    rotation_angles = [node.metrics['RotationAngle'] for node in list_nodes]
+
+    spatial_coherences = compute_spatial_coherence(list_nodes, translation_x, translation_y, 40)
+    magnitude_zscores = compute_magnitude_zscore(list_nodes, displacement, 40)
+
+    mask_artifact = (
+        (np.array(spatial_coherences) < 0.707) |       # direction disagrees with neighbors (> 45°)
+        (np.array(magnitude_zscores) > 2.5) |           # magnitude is outlier among neighbors
+        (np.array(rotation_angles) > 5) |              # large rotation
+        (np.array(planarity) > 0.999)           # flat surface → degenerate ICP
+    )
+    if verbose:
+        print(f"Number of masked samples: {np.sum(mask_artifact)} ({np.round(np.sum(mask_artifact)/mask_artifact.shape[0]*100, 2)}%)")
+
+    for node, coherence, magnitude, rotation, artifact in zip(list_nodes, spatial_coherences, magnitude_zscores, rotation_angles, mask_artifact):
+        node.metrics['spatial_coherence'] = coherence
+        node.metrics['magnitude_zscore'] = magnitude
+        node.metrics['rotation_angle'] = rotation
+        node.metrics['confidence'] = compute_confidence(coherence, magnitude, rotation, node.planarity, node.fitness, node.inlier_rmse, 
+                                                        w_fitness=0, w_rmse=0)
+        node.metrics['is_artifact'] = bool(artifact)
+
     if verbose:
         print("Time to compute translation and rotation: ", time() - time0)
 
@@ -62,13 +91,14 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
             output_path=src_out_gpkg_full,
             offset=offset,
             do_clip_overlaps=False,
+            to_export='both',
             crs=crs,
             verbose=verbose,
         )
 
     # Export only leaves
-    data_leaves = [x for x in data if x[-2] == True]
-    mask_leaves = np.array([x[-2] for x in data], dtype=np.bool)
+    data_leaves = [x for x in data if x[-4] == True]
+    mask_leaves = np.array([x[-4] for x in data], dtype=np.bool)
     bbox_data_leaves = list(np.array(bbox_data)[mask_leaves])
 
     export_points_and_bboxes(
@@ -78,7 +108,8 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
         output_path=src_out_gpkg_leaves,
         offset=offset,
         do_clip_overlaps=True,
-            crs=crs,
+        to_export='both',
+        crs=crs,
         verbose=verbose,
     )
 

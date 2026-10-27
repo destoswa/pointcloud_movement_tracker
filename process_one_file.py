@@ -2,6 +2,7 @@ import os
 import shutil
 import numpy as np
 import open3d as o3d
+import laspy
 from itertools import product
 from time import time
 import pickle
@@ -18,6 +19,149 @@ from src.icp_utils import \
     prepare_files, \
     get_nodes_of_level
 from src.production_utils import merge_results_from_list
+
+from scipy.interpolate import griddata
+from scipy.spatial import Delaunay, KDTree
+
+
+def poisson_disk_sample(xmin, xmax, ymin, ymax, min_dist, max_pts=None):
+    """
+    Generate irregularly spaced points with minimum distance constraint.
+    Much closer to real LiDAR distribution than a regular grid.
+    """
+    pts = []
+    attempts = 30  # attempts per point before giving up
+
+    # Start with a random point
+    pts.append([
+        np.random.uniform(xmin, xmax),
+        np.random.uniform(ymin, ymax)
+    ])
+
+    tree = KDTree(pts)
+
+    max_pts = max_pts or int((xmax - xmin) * (ymax - ymin) / (min_dist ** 2))
+
+    while len(pts) < max_pts:
+        # Pick random existing point as seed
+        seed = pts[np.random.randint(len(pts))]
+        found = False
+        for _ in range(attempts):
+            # Sample in annulus [min_dist, 2*min_dist]
+            angle = np.random.uniform(0, 2 * np.pi)
+            radius = np.random.uniform(min_dist, 2 * min_dist)
+            candidate = [
+                seed[0] + radius * np.cos(angle),
+                seed[1] + radius * np.sin(angle)
+            ]
+            # Check bounds
+            if not (xmin <= candidate[0] < xmax and ymin <= candidate[1] < ymax):
+                continue
+            # Check min distance to existing points
+            dist, _ = tree.query(candidate)
+            if dist >= min_dist:
+                pts.append(candidate)
+                tree = KDTree(pts)  # rebuild tree
+                found = True
+                break
+
+        if not found and len(pts) > max_pts // 2:
+            break  # good enough
+
+    return np.array(pts)
+
+
+def densify_pointcloud(pc, target_spacing=0.5, max_hole_dist=2.0, method='linear'):
+    """
+    Densify a sparse point cloud by interpolating missing ground points.
+    Only adds points in holes, not where points already exist.
+    
+    Parameters:
+        pc: o3d.geometry.PointCloud
+        target_spacing: desired point spacing in meters
+        max_hole_dist: minimum distance from existing points to be considered a hole
+        method: interpolation method: 'linear', 'cubic' or 'nearest'
+    """
+    from scipy.interpolate import griddata
+    from scipy.spatial import KDTree
+
+    pts = pc.xyz
+    x, y, _ = pts[:, 0], pts[:, 1], pts[:, 2]
+
+    # Build regular grid at target spacing
+    xmin, xmax = x.min(), x.max()
+    ymin, ymax = y.min(), y.max()
+    grid_x, grid_y = np.meshgrid(
+        np.arange(xmin, xmax, target_spacing),
+        np.arange(ymin, ymax, target_spacing)
+    )
+
+    # # Add random jitter up to half the spacing:
+    # jitter_x = np.random.uniform(-target_spacing/2, target_spacing/2, grid_x.shape)
+    # jitter_y = np.random.uniform(-target_spacing/2, target_spacing/2, grid_y.shape)
+    # grid_x = grid_x + jitter_x
+    # grid_y = grid_y + jitter_y
+
+    grid_pts = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+
+    # grid_pts = poisson_disk_sample(xmin, xmax, ymin, ymax, 0.5, max_pts=100_000)
+    # --- OPTIMIZATION 1: subsample for KDTree ---
+    # No need to build tree on 30M points — subsample to ~100k
+    max_tree_pts = 100_000
+    if len(pts) > max_tree_pts:
+        idx = np.random.choice(len(pts), max_tree_pts, replace=False)
+        tree_pts = pts[idx, :2]
+    else:
+        tree_pts = pts[:, :2]
+    
+    tree = KDTree(tree_pts)
+
+    # --- OPTIMIZATION 2: batch query (fully vectorized) ---
+    dists, _ = tree.query(grid_pts, workers=-1)  # workers=-1 = all CPU cores
+    hole_mask = dists > max_hole_dist
+
+    if hole_mask.sum() == 0:
+        print("  No holes found")
+        return pc
+
+    # --- OPTIMIZATION 3: interpolate only on hole points ---
+    # Subsample source points for interpolation too
+    max_interp_pts = 200_000
+    if len(pts) > max_interp_pts:
+        idx = np.random.choice(len(pts), max_interp_pts, replace=False)
+        interp_src = pts[idx]
+    else:
+        interp_src = pts
+
+    hole_pts = grid_pts[hole_mask]
+    grid_z = griddata(
+        points=interp_src[:, :2],
+        values=interp_src[:, 2],
+        xi=hole_pts,
+        method=method,
+        fill_value=np.nan
+    )
+
+    # Remove NaN (outside convex hull)
+    valid = ~np.isnan(grid_z)
+    fill_pts = np.column_stack([
+        hole_pts[valid, 0],
+        hole_pts[valid, 1],
+        grid_z[valid]
+    ])
+
+    all_pts = np.vstack([pts, fill_pts])
+    # pc_dense = o3d.geometry.PointCloud()
+    # pc_dense.points = o3d.utility.Vector3dVector(all_pts)
+   # --- Convert to laspy ---
+    # header = laspy.LasHeader(point_format=0, version="1.4")
+    las_out = laspy.LasData(header=pc.header)
+    las_out.x = all_pts[:, 0]
+    las_out.y = all_pts[:, 1]
+    las_out.z = all_pts[:, 2]
+
+    print(f"  Added {valid.sum()} synthetic points to fill {hole_mask.sum()} holes")
+    return las_out
 
 
 def ICP_process(conf, bbox_offset=None, verbose=True):
@@ -64,6 +208,22 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         'source': read_pc_with_cat_timming(conf.data.src_pc1, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
         'target': read_pc_with_cat_timming(conf.data.src_pc2, conf.args.field_names[3], list_cat_to_keep, conf.categories.use_category),
     }
+
+    # # DENSIFICATION
+    # os.makedirs(pointcloud_res, exist_ok=True)
+    # src_file = os.path.join(conf.data.src_res, r'pointclouds\before_densification.laz')
+    # tiles_original['source'].write(src_file)
+    # for key, val in tiles_original.items():
+    #     tiles_original[key] = densify_pointcloud(
+    #         pc=val, 
+    #         target_spacing=0.5, 
+    #         max_hole_dist=3.0,
+    #         method='cubic',
+    #         )
+    # src_file = os.path.join(conf.data.src_res, r'pointclouds\after_densification.laz')
+    # tiles_original['source'].write(src_file)
+    # quit()
+
     if verbose:
         print("time to load: ", time() - time0)
     
@@ -205,7 +365,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         # generate indices if root small enough
         indices_src=np.arange(len(xyz_src), dtype=np.int32)
         indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
-        indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
+        # indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
 
         # build tree
         time0 = time()
@@ -216,7 +376,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             bbox=bbox_dict,
             indices_src=indices_src,
             indices_tgt=indices_tgt,
-            indices_tgt_neigh=indices_tgt_neigh,
+            # indices_tgt_neigh=indices_tgt_neigh,
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
@@ -224,7 +384,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             is_anthropic=confs[mode]['is_anthropic'],
         )
         if verbose:
-            print("time to build quadtree: ", time() - time0)
+            print(f"time to build {mode} quadtree: ", time() - time0)
         time_quadtree_creation += time() - time0
 
         # arguments for normal computation
@@ -237,7 +397,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         
         # run the ICP algorithm on every node of the tree
         if verbose:
-            print("Processing ICP on every node of the tree (might take a few minutes):")
+            print(f"Processing ICP on every {mode} node of the tree (might take a few minutes):")
         run_icp_on_tree(
             pc_source=tiles['source'], 
             pc_target=tiles['target'], 
@@ -345,7 +505,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             crs=conf.data.crs,
             verbose=conf.postprocessing.verbose,
             )
-        if conf.args.verbose:
+        if verbose:
             print(f"Postprocessing executed in {int(time() - time_postprocess)}s")
 
     # save config

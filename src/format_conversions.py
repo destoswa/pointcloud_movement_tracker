@@ -543,6 +543,103 @@ class Convertions:
         if verbose:
             print(f"✅ Wrote LAZ file: {out_laz}")
 
+    @staticmethod
+    def convert_tif_to_las(in_tif, out_laz, verbose=True, **kwargs):
+        Convertions.convert_tif_to_laz(in_tif, out_laz, verbose, **kwargs)
+
+    @staticmethod
+    def convert_las_to_tif(in_las, out_tif, resolution=1.0, nodata=-9999.0, crs=None, verbose=True, **kwargs):
+        """
+        Convert a LAS/LAZ point cloud to a DEM GeoTIFF using max Z per cell.
+
+        Parameters:
+            in_las (str): Path to input .las/.laz file.
+            out_tif (str): Path to output .tif file.
+            resolution (float): Output raster resolution in map units.
+            nodata (float): Nodata value for empty cells.
+            crs: Override CRS (pyproj.CRS). If None, uses CRS from LAS header.
+            verbose (bool): Print progress info.
+        """
+        # --------------------------------
+        # Read LAS
+        # --------------------------------
+        las = laspy.read(in_las)
+        x = np.asarray(las.x)
+        y = np.asarray(las.y)
+        z = np.asarray(las.z)
+
+        if verbose:
+            print(f"N points  : {len(x)}")
+            print(f"X range   : {x.min():.2f} → {x.max():.2f}")
+            print(f"Y range   : {y.min():.2f} → {y.max():.2f}")
+            print(f"Z range   : {z.min():.2f} → {z.max():.2f}")
+
+        # --------------------------------
+        # Compute grid extent
+        # --------------------------------
+        xmin, xmax = x.min(), x.max()
+        ymin, ymax = y.min(), y.max()
+
+        width  = int(np.ceil((xmax - xmin) / resolution))
+        height = int(np.ceil((ymax - ymin) / resolution))
+
+        # --------------------------------
+        # Compute pixel indices
+        # --------------------------------
+        col = np.clip(((x - xmin) / resolution).astype(int), 0, width - 1)
+        row = np.clip(((ymax - y) / resolution).astype(int), 0, height - 1)
+
+        # --------------------------------
+        # Rasterize using max Z per cell
+        # --------------------------------
+        dem = np.full((height, width), -np.inf, dtype=np.float32)
+        np.maximum.at(dem, (row, col), z)
+
+        # Replace empty cells with nodata
+        dem[dem == -np.inf] = nodata
+
+        if verbose:
+            valid = dem != nodata
+            print(f"Grid size : {height} x {width}")
+            print(f"Valid cells: {valid.sum()} / {height * width}")
+
+        # --------------------------------
+        # Get CRS
+        # --------------------------------
+        if crs is None:
+            try:
+                crs = las.header.parse_crs()
+            except Exception:
+                crs = None
+                if verbose:
+                    print("Warning: no CRS found in LAS header, writing without CRS")
+
+        # --------------------------------
+        # Write GeoTIFF
+        # --------------------------------
+        transform = rasterio.transform.from_origin(xmin, ymax, resolution, resolution)
+
+        with rasterio.open(
+            out_tif, "w",
+            driver="GTiff",
+            height=height,
+            width=width,
+            count=1,
+            dtype=np.float32,
+            crs=crs,
+            transform=transform,
+            nodata=nodata,
+        ) as dst:
+            dst.write(dem, 1)
+
+        if verbose:
+            print(f"✅ Wrote TIF file: {out_tif}")
+
+    @staticmethod
+    def convert_laz_to_tif(in_las, out_tif, resolution=1.0, nodata=-9999.0, crs=None, verbose=True, **kwargs):
+        Convertions.convert_las_to_tif(in_las, out_tif, resolution, nodata, crs, verbose, **kwargs)
+
+
 def convert_one_file(src_file_in, src_file_out, in_type, out_type, verbose=True, **kwargs):
     assert in_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd', 'tif', 'tiff']
     assert out_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'tif', 'tiff']
@@ -573,7 +670,6 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, offs
     Returns:
         - None: Saves all converted files into the specified output folder.
     """
-    
     assert in_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'pcd', 'tif', 'tiff']
     assert out_type.replace('.', '') in ['las', 'laz', 'txt', 'npz', 'ply', 'tif', 'tiff']
     assert in_type != out_type
