@@ -24,6 +24,8 @@ class QuadNode:
         self.anthropic_state = 0 if is_anthropic else -1   # 0 = normal, 1 = new building, 2 = destruction
         self.is_leaf = True
         self.is_absurd = False
+        self.local_absurd_val = 0.0
+        self.global_absurd_val = 0.0
 
     def __len__(self):
         counter = len(self.children)

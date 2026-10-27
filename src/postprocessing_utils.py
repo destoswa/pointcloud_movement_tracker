@@ -155,14 +155,15 @@ def detect_absurds(node, absurd_th_local, absurd_th_global):
     counter = 0
 
     # Compute local transform
-    center_original = np.vstack([node.center.reshape((3,1)), np.array([1])])
-    center = np.linalg.inv(node.local_transform) @ node.global_transform @ center_original
-    translated = node.local_transform @ center
-    diff = translated - center
-    norm_local = float(np.linalg.norm(diff[:2, 0]))   # norm 2D along 0xy
-    diff_original = center - center_original
-    norm_global = float(np.linalg.norm(diff_original))
-
+    # center_original = np.vstack([node.center.reshape((3,1)), np.array([1])])
+    # center = np.linalg.inv(node.local_transform) @ node.global_transform @ center_original
+    # translated = node.local_transform @ center
+    # diff = translated - center
+    # norm_local = float(np.linalg.norm(diff[:2, 0]))   # norm 2D along 0xy
+    # # diff_original = center - center_original
+    # norm_global = float(np.linalg.norm(diff))
+    norm_local = node.metrics['Disp2D_local']
+    norm_global = node.metrics['Disp3D']
     # Apply changes if value absurd
     if (norm_local > absurd_th_local or norm_global > absurd_th_global) and node.anthropic_state <= 0 :# and node.is_leaf:
         counter += 1
@@ -172,6 +173,8 @@ def detect_absurds(node, absurd_th_local, absurd_th_global):
             for m in node.metrics.keys():
                 node.metrics[m] = node.parent.metrics[m]
         node.is_absurd = True
+        node.local_absurd_val = norm_local
+        node.global_absurd_val = norm_global
         node.is_leaf = True
         node.children = []
     else:

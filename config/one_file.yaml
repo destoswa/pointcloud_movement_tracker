@@ -1,11 +1,9 @@
 data:
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\full_22_25\Taroko_ToTo_2022_cropped_on_2025.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\full_22_25\Taroko_ToTo_2025_1m.laz
-  # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_33_tiling\Taroko_ToTo_2022_cropped_on_2025_small_subsampled_2m.laz
-  # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_trD:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_34_huge_translation\test_real_sample\swisssurface3d_2018_2589-1169_2056_5728.lazacking_dev\data\test_33_tiling\Taroko_ToTo_2025_1m_small_subsampled_2m.laz
-  src_pc1: D:\Terranum_SD\99_Data\PC_movement_tracking\TEMP\DEM2015_2589_1169.tif
-  src_pc2: D:\Terranum_SD\99_Data\PC_movement_tracking\TEMP\DEM2019_2589_1169.tif
-  src_res: default
+  src_pc1: D:\Terranum_SD\99_Data\PC_movement_tracking\Brienz\test_absurd_values\original\swissalti3d_2019_2764-1171_0.5_2056_5728.tif
+  src_pc2: D:\Terranum_SD\99_Data\PC_movement_tracking\Brienz\test_absurd_values\original\swissalti3d_2023_2764-1171_0.5_2056_5728.tif
+  src_res: D:\Terranum_SD\99_Data\PC_movement_tracking\Brienz\test_absurd_values\original\results_no_local_global_20
   # src_pc1: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_MNT25_reprojLV95_25m.laz
   # src_pc2: D:\GitHubProjects\Terranum_repo\pc_movement_tracking_dev\data\test_30_Ian\25m\PlOrbe_swissALTI3D_2015_50cm_merged_reprojMNT25_25m.laz
   # src_pc1: data/test/epoch1.laz # path to the first (older) point cloud
@@ -38,7 +36,7 @@ categories:
   min_points_anthropic: 50      # minimum number of points in a tile to allow further subdivision (anthropic)
 postprocessing:
   src_transforms: default       # path to saved transforms pickle file (default = auto-detect from src_res)
-  absurd_dist_local: 5          # local 2D displacement threshold (m) above which a result is flagged as artifact
+  absurd_dist_local: 10000000000          # local 2D displacement threshold (m) above which a result is flagged as artifact
   absurd_dist_global: 20       # global 3D displacement threshold (m) above which a result is flagged as artifact
   to_keep:
     full_tree: True             # whether to save a GPKG with every tiles of every layer
