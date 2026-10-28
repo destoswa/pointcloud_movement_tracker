@@ -98,7 +98,7 @@ def postprocessing(root, src_out_gpkg, offset, keep_full_tree, keep_layers, absu
 
     # Export only leaves
     data_leaves = [x for x in data if x[-4] == True]
-    mask_leaves = np.array([x[-4] for x in data], dtype=np.bool)
+    mask_leaves = np.array([x[-4] for x in data], dtype=np.bool_)
     bbox_data_leaves = list(np.array(bbox_data)[mask_leaves])
 
     export_points_and_bboxes(

@@ -77,7 +77,7 @@ def compute_rotation(node):
     if node.anthropic_state <= 0:
         # Compute translation at bbox center
         center = np.vstack([node.center.reshape((3,1)), np.array([1])])
-        translated = np.linalg.matmul(node.global_transform, center)
+        translated = node.global_transform @ center
         diff = translated - center
         dx, dy, dz = list(diff[:3].squeeze(-1))
         norm_3d = float(np.linalg.norm(diff[:3]))

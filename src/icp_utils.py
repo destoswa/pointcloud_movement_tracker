@@ -46,7 +46,7 @@ def read_pc_with_cat_timming(src_pc, cat_field, list_cat_to_keep, use_cat=False)
             for val in list_cat_to_keep:
                 mask[classification == val] = True
         else:
-            mask = np.ones(len(pc), dtype=np.bool)
+            mask = np.ones(len(pc), dtype=np.bool_)
         pc.points = pc.points[mask]
     else:
         raise ValueError(f"The pointcloud is not of type LAS or LAZ: {src_pc}")
@@ -145,20 +145,27 @@ def points_in_bbox(xyz_src, xyz_tgt, node, bbox):
         (pts_src[:, 1] >= min_b[1]) & (pts_src[:, 1] < max_b[1])
     )
 
+    mask_tgt = (
+        (pts_tgt[:, 0] >= min_b[0]) & (pts_tgt[:, 0] < max_b[0]) &
+        (pts_tgt[:, 1] >= min_b[1]) & (pts_tgt[:, 1] < max_b[1])
+    )
+
     mask_tgt_neigh = (
         (pts_tgt[:, 0] >= min_b_w_neigh[0]) & (pts_tgt[:, 0] < max_b_w_neigh[0]) &
         (pts_tgt[:, 1] >= min_b_w_neigh[1]) & (pts_tgt[:, 1] < max_b_w_neigh[1])
     )
 
     if isinstance(node.indices_src, np.ndarray):
-        return node.indices_src[mask_src], node.indices_tgt[mask_tgt_neigh]
+        # return node.indices_src[mask_src], node.indices_tgt[mask_tgt_neigh]
+        return node.indices_src[mask_src], node.indices_tgt[mask_tgt], node.indices_tgt[mask_tgt_neigh]
     else:
-        return np.arange(len(xyz_src))[mask_src], np.arange(len(xyz_tgt))[mask_tgt_neigh]
+        # return np.arange(len(xyz_src))[mask_src], np.arange(len(xyz_tgt))[mask_tgt_neigh]
+        return np.arange(len(xyz_src))[mask_src], np.arange(len(xyz_tgt))[mask_tgt], np.arange(len(xyz_tgt))[mask_tgt_neigh]
 
 
 def build_quadtree(
         xyz_src, xyz_tgt, parent, bbox, 
-        indices_src, indices_tgt, 
+        indices_src, indices_tgt, indices_tgt_neigh,
         level, min_tile_size, min_points, grid_pos, is_anthropic=False
         ):
     """Recursively build quadtree based on point density."""
@@ -173,7 +180,7 @@ def build_quadtree(
         else:
             center = np.mean(xyz_src, axis=0)
             
-    node = QuadNode(bbox, indices_src, indices_tgt, center, level, grid_pos, parent, is_anthropic)
+    node = QuadNode(bbox, indices_src, indices_tgt, indices_tgt_neigh, center, level, grid_pos, parent, is_anthropic)
 
     # stopping conditions
     tile_size = np.min((np.array(bbox['max_bound']) - np.array(bbox['min_bound']))[0:2])
@@ -199,15 +206,15 @@ def build_quadtree(
     tile_size = np.min((np.array(sub_bboxes[0]['max_bound']) - np.array(sub_bboxes[0]['min_bound']))[0:2])
     if tile_size > min_tile_size:
         for id_subbox, subbbox in enumerate(sub_bboxes):
-            # sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
-            sub_idx_src, sub_idx_tgt = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
+            sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
+            # sub_idx_src, sub_idx_tgt = points_in_bbox(xyz_src, xyz_tgt, node, subbbox)
 
             sub_grid_pos = [
                 id_subbox % 2 + grid_pos[0] * 2**level, 
                 id_subbox // 2 + grid_pos[1] * 2**level]
             
             child = build_quadtree(
-                xyz_src, xyz_tgt, node, subbbox, sub_idx_src, sub_idx_tgt,
+                xyz_src, xyz_tgt, node, subbbox, sub_idx_src, sub_idx_tgt, sub_idx_tgt_neigh,
                 level + 1, min_tile_size, min_points, sub_grid_pos, is_anthropic,
             )
             node.children.append(child)
@@ -247,7 +254,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
 
     time_sub_0 = time()
 
-    # pc_tgt_neigh = extract_subcloud(pc_target, node.indices_tgt_neigh, pointtoplane_args)
+    pc_tgt_neigh = extract_subcloud(pc_target, node.indices_tgt_neigh, pointtoplane_args)
     pc_tgt = extract_subcloud(pc_target, node.indices_tgt, pointtoplane_args)
     pc_src = extract_subcloud(pc_source, node.indices_src)
     time_subclouds_creation.append(time() - time_sub_0)
@@ -264,6 +271,8 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
         time_sub_0 = time()
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_id={node.id}_target.ply')
         o3d.io.write_point_cloud(src_file, pc_tgt)
+        src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_id={node.id}_target_with_neigh.ply')
+        o3d.io.write_point_cloud(src_file, pc_tgt_neigh)
         src_file = os.path.join(src_res, f'alligned_pc_lvl={node.level}_id={node.id}_source.ply')
         o3d.io.write_point_cloud(src_file, pc_src)
         time_subclouds_saving.append(time() - time_sub_0)
@@ -299,7 +308,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     if args.method in ['pointtopoint', 'pointtoplane', 'mix']:
         reg = o3d.pipelines.registration.registration_icp(
             pc_src,
-            pc_tgt,
+            pc_tgt_neigh,
             max_correspondence_distance=max_correspondence,
             init=np.eye(4),
             estimation_method=method,
@@ -312,7 +321,7 @@ def run_icp_on_tree(node, pc_source, pc_target, src_res, args, time_subclouds_cr
     else:   # gicp
         reg = o3d.pipelines.registration.registration_generalized_icp(
             pc_src,
-            pc_tgt,
+            pc_tgt_neigh,
             max_correspondence_distance=max_correspondence,
             init=np.eye(4),
             estimation_method=method,

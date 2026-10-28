@@ -365,7 +365,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
         # generate indices if root small enough
         indices_src=np.arange(len(xyz_src), dtype=np.int32)
         indices_tgt=np.arange(len(xyz_tgt), dtype=np.int32)
-        # indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
+        indices_tgt_neigh=np.arange(len(xyz_tgt), dtype=np.int32)
 
         # build tree
         time0 = time()
@@ -376,7 +376,7 @@ def ICP_process(conf, bbox_offset=None, verbose=True):
             bbox=bbox_dict,
             indices_src=indices_src,
             indices_tgt=indices_tgt,
-            # indices_tgt_neigh=indices_tgt_neigh,
+            indices_tgt_neigh=indices_tgt_neigh,
             level=0,
             min_tile_size=confs[mode]['min_tile_size'],
             min_points=confs[mode]['min_points'],
