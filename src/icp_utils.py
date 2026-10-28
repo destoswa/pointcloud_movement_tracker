@@ -137,7 +137,7 @@ def points_in_bbox(xyz_src, xyz_tgt, node, bbox):
     max_b_w_neigh = max_b + span
     
     pts_src = xyz_src[node.indices_src] if isinstance(node.indices_src, np.ndarray) else xyz_src
-    pts_tgt = xyz_tgt[node.indices_tgt] if isinstance(node.indices_tgt, np.ndarray) else xyz_tgt
+    pts_tgt = xyz_tgt[node.indices_tgt_neigh] if isinstance(node.indices_tgt_neigh, np.ndarray) else xyz_tgt
 
     # compute points in source
     mask_src = (
@@ -157,7 +157,10 @@ def points_in_bbox(xyz_src, xyz_tgt, node, bbox):
 
     if isinstance(node.indices_src, np.ndarray):
         # return node.indices_src[mask_src], node.indices_tgt[mask_tgt_neigh]
-        return node.indices_src[mask_src], node.indices_tgt[mask_tgt], node.indices_tgt[mask_tgt_neigh]
+        indices_src = node.indices_src[mask_src]
+        indices_tgt = node.indices_tgt_neigh[mask_tgt]
+        indices_tgt_neigh = node.indices_tgt_neigh[mask_tgt_neigh]
+        return indices_src, indices_tgt, indices_tgt_neigh
     else:
         # return np.arange(len(xyz_src))[mask_src], np.arange(len(xyz_tgt))[mask_tgt_neigh]
         return np.arange(len(xyz_src))[mask_src], np.arange(len(xyz_tgt))[mask_tgt], np.arange(len(xyz_tgt))[mask_tgt_neigh]

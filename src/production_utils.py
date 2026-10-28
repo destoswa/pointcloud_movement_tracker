@@ -421,8 +421,8 @@ def merge_results_from_list(lst_result_paths, src_res_merged, crs="EPSG:2056", v
 
 if __name__ == "__main__":
     pass
-    src_per_tile = r"E:\Swann\pc_move_vaud_east_7"
-    src_merged = r"E:\Swann\pc_move_vaud_east_7\merged"
+    src_per_tile = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\pc_VD_first_results_wrong_anthropic_state"
+    src_merged = r"D:\Terranum_SD\99_Data\PC_movement_tracking\Vaud\pc_VD_first_results_wrong_anthropic_state_merged"
     lst_paths = [os.path.join(src_per_tile, x) for x in os.listdir(src_per_tile)]
     merge_results_from_list(
         lst_result_paths=lst_paths,
